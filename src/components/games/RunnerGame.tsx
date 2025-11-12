@@ -19,40 +19,34 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [isJumping, setIsJumping] = useState(false);
   const [playerY, setPlayerY] = useState(0);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [gameSpeed, setGameSpeed] = useState(4); // Немного медленнее
-  const [runAnimation, setRunAnimation] = useState(0); // Для анимации ног
+  const [gameSpeed, setGameSpeed] = useState(4);
   const obstacleIdRef = useRef(0);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
-  const runAnimRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ 1. АНИМАЦИЯ БЕГА (ноги)
+  // ✅ АНИМАЦИЯ НОГ (простая, без багов)
+  const [legAnim, setLegAnim] = useState(0);
+
   useEffect(() => {
     if (!gameOver && !isJumping) {
-      runAnimRef.current = setInterval(() => {
-        setRunAnimation((prev) => (prev + 0.3) % (Math.PI * 2));
-      }, 100);
+      const legInterval = setInterval(() => {
+        setLegAnim((prev) => 1 - prev);
+      }, 150);
+      return () => clearInterval(legInterval);
     }
-    return () => {
-      if (runAnimRef.current) clearInterval(runAnimRef.current);
-    };
   }, [gameOver, isJumping]);
 
-  // Спавн препятствий (реже + контроль расстояния)
+  // ✅ СПАВН ПРЕПЯТСТВИЙ (реже + без наложений)
   useEffect(() => {
-    const interval = setInterval(
+    const spawnInterval = setInterval(
       () => {
         if (!gameOver && obstacles.length === 0) {
-          // Только если нет препятствий
-          setObstacles((prev) => [
-            ...prev.filter((obs) => obs.x > -60),
-            { x: 650, id: obstacleIdRef.current++ }, // Реже спавн
-          ]);
+          setObstacles([{ x: 650, id: obstacleIdRef.current++ }]);
         }
       },
-      1800 - gameSpeed * 100,
-    ); // Динамическая частота
+      2000 - gameSpeed * 50,
+    ); // 2 сек базово
 
-    return () => clearInterval(interval);
+    return () => clearInterval(spawnInterval);
   }, [gameOver, gameSpeed, obstacles.length]);
 
   // Игровой цикл
@@ -60,13 +54,14 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     if (!gameOver) {
       gameLoopRef.current = setInterval(() => {
         setObstacles((prev) =>
-          prev.map((obs) => ({ ...obs, x: obs.x - gameSpeed })),
+          prev
+            .map((obs) => ({ ...obs, x: obs.x - gameSpeed }))
+            .filter((obs) => obs.x > -60),
         );
         setScore((s) => s + 1);
 
-        if (score % 150 === 0 && score > 0) {
-          // Реже ускорение
-          setGameSpeed((s) => Math.min(s + 0.3, 8)); // Макс. скорость
+        if (score % 200 === 0 && score > 0) {
+          setGameSpeed((s) => Math.min(s + 0.2, 7));
         }
       }, 30);
     }
@@ -76,34 +71,37 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [gameOver, gameSpeed, score]);
 
-  // Прыжок
+  // ✅ ПРЫЖОК (как было, но выше)
   useEffect(() => {
     if (isJumping) {
       let jumpProgress = 0;
       const jumpInterval = setInterval(() => {
-        jumpProgress += 0.12;
+        jumpProgress += 0.1;
         if (jumpProgress <= Math.PI) {
-          setPlayerY(Math.sin(jumpProgress) * 120); // Выше прыжок
+          setPlayerY(Math.sin(jumpProgress) * 140); // Выше!
         } else {
           setPlayerY(0);
           setIsJumping(false);
           clearInterval(jumpInterval);
         }
-      }, 18);
+      }, 20);
       return () => clearInterval(jumpInterval);
     }
   }, [isJumping]);
 
-  // Коллизия (точнее)
+  // ✅ КОЛЛИЗИЯ (точно настроена!)
   useEffect(() => {
-    obstacles.forEach((obs) => {
-      if (obs.x > 60 && obs.x < 110 && playerY < 30) {
-        // Точнее зона
+    if (gameOver) return;
+
+    for (const obs of obstacles) {
+      // Препятствие: 70-120px, игрок на земле: playerY < 20
+      if (obs.x > 70 && obs.x < 120 && playerY < 25) {
         setGameOver(true);
         onGameEnd(score, score >= 1000 ? "win" : "lose");
+        break;
       }
-    });
-  }, [obstacles, playerY, score, onGameEnd]);
+    }
+  }, [obstacles, playerY, score, onGameEnd, gameOver]);
 
   const handleJump = () => {
     if (!isJumping && !gameOver) {
@@ -111,7 +109,6 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     }
   };
 
-  // Клавиатура
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -149,30 +146,12 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         <div
           className="relative w-full h-72 bg-gradient-to-b from-sky-200 via-sky-100 to-green-200 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl"
           onClick={handleJump}
-          onTouchStart={handleJump}
         >
           {/* Облака */}
-          <div
-            className="absolute top-8 left-8 text-5xl animate-float"
-            style={{ animationDelay: "0s" }}
-          >
-            ☁️
-          </div>
+          <div className="absolute top-8 left-8 text-5xl animate-float">☁️</div>
           <div
             className="absolute top-16 right-24 text-4xl animate-float"
             style={{ animationDelay: "1s" }}
-          >
-            ☁️
-          </div>
-          <div
-            className="absolute top-10 left-1/2 text-5xl animate-float"
-            style={{ animationDelay: "2s" }}
-          >
-            ☁️
-          </div>
-          <div
-            className="absolute top-20 left-1/3 text-3xl animate-float"
-            style={{ animationDelay: "1.5s" }}
           >
             ☁️
           </div>
@@ -180,140 +159,102 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
           {/* Земля */}
           <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-green-700 via-green-600 to-green-400 rounded-b-2xl">
             <div className="absolute top-0 left-0 right-0 h-3 bg-green-900/40 shadow-inner" />
-            <div className="flex gap-12 absolute top-2 left-0 w-full overflow-hidden">
+            <div className="flex gap-10 absolute top-2 left-0 w-full overflow-hidden">
               {Array.from({ length: 30 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="text-green-900 text-base animate-move-left"
-                  style={{ animationDuration: `${8 + gameSpeed * 0.5}s` }}
-                >
+                <span key={i} className="text-green-900 text-lg">
                   🌱
                 </span>
               ))}
             </div>
           </div>
 
-          {/* ✅ 2. ЧЕЛОВЕЧЕК ОТЗЕРКАЛЕН + АНИМАЦИЯ НОГ */}
+          {/* ✅ ЧЕЛОВЕЧЕК (отзеркален + анимация ног) */}
           <div
-            className="absolute w-20 h-20 flex items-center justify-center text-5xl transition-all duration-150 z-20 shadow-2xl"
+            className="absolute w-20 h-20 flex items-center justify-center text-6xl transition-all duration-200 z-20 shadow-2xl"
             style={{
-              left: "80px", // Слева (бежит вправо)
+              left: "75px",
               bottom: `${85 + playerY}px`,
-              transform: `
-                scaleX(-1) 
-                ${isJumping ? "rotate(-20deg) scale(1.15)" : "rotate(5deg) scale(1.05)"}
-              `,
+              transform: `scaleX(-1) ${isJumping ? "scale(1.1)" : "scale(1)"}`,
             }}
           >
             <div className="relative">
-              <div className="text-4xl">🏃‍♂️</div>
-
-              {/* Анимация ног */}
+              🏃
+              {/* ✅ ПРОСТАЯ АНИМАЦИЯ НОГ */}
               <div
-                className="absolute -bottom-4 left-1/2 w-12 h-3 bg-yellow-400/80 rounded-full blur-sm shadow-lg"
+                className="absolute -bottom-2 left-2 w-3 h-6 bg-skin-400 rounded-l-full"
                 style={{
-                  transform: `translateX(-50%) translateY(${Math.sin(runAnimation) * 8}px) scaleX(${1 + Math.cos(runAnimation) * 0.2})`,
-                  opacity: isJumping ? 0 : 1,
-                  display: isJumping ? "none" : "block",
+                  transform: `rotate(${legAnim ? "25deg" : "-25deg"}) translateY(2px)`,
+                  transition: "transform 0.15s ease-out",
+                }}
+              />
+              <div
+                className="absolute -bottom-2 right-2 w-3 h-6 bg-skin-400 rounded-r-full"
+                style={{
+                  transform: `rotate(${legAnim ? "-25deg" : "25deg"}) translateY(2px)`,
+                  transition: "transform 0.15s ease-out",
+                }}
+              />
+              {/* Тень */}
+              <div
+                className="absolute -bottom-1 left-1/2 w-12 h-2 bg-black/30 rounded-full blur-sm"
+                style={{
+                  transform: "translateX(-50%)",
+                  opacity: Math.max(0.3, 1 - playerY / 150),
                 }}
               />
             </div>
           </div>
 
-          {/* ✅ 3. МЕНЬШИЕ ПРЕПЯТСТВИЯ */}
+          {/* ✅ МЕНЬШИЕ ПРЕПЯТСТВИЯ */}
           {obstacles.map((obs) => (
             <div
               key={obs.id}
-              className="absolute flex flex-col items-center z-10"
+              className="absolute z-10"
               style={{
                 left: `${obs.x}px`,
-                bottom: "82px",
+                bottom: "80px",
               }}
             >
-              {/* Меньше размер */}
-              <div className="w-10 h-14 bg-gradient-to-b from-red-400 via-red-500 to-red-700 rounded-t-xl border-2 border-red-900 shadow-xl relative animate-shake">
-                <div className="absolute inset-1.5 bg-red-200/30 rounded-lg" />
+              <div className="w-10 h-12 bg-gradient-to-b from-red-400 to-red-600 rounded-t-xl border-2 border-red-900 shadow-xl relative">
+                <div className="absolute inset-1 bg-red-200/50 rounded-lg" />
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl">
                   ⚠️
                 </div>
               </div>
-              <div className="w-12 h-2.5 bg-red-900 rounded-b-lg shadow-lg mt-0.5" />
+              <div className="w-12 h-2 bg-red-900 rounded-b-lg mx-1 shadow-lg" />
             </div>
           ))}
 
           {/* Game Over */}
           {gameOver && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-md rounded-2xl z-30">
-              <div className="text-white text-center space-y-6 p-10 bg-gradient-to-br from-gray-900/90 to-black/90 rounded-2xl border-2 border-cyan-500/50 shadow-2xl">
-                <p className="text-6xl animate-bounce">💥</p>
+              <div className="text-white text-center space-y-4 p-8 bg-black/50 rounded-xl border-2 border-cyan-500/50">
+                <p className="text-5xl">💥</p>
                 <p className="text-4xl font-heading font-bold">
                   Игра окончена!
                 </p>
-                <p className="text-3xl bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent font-bold">
-                  {score}
-                </p>
-                <p className="text-xl text-cyan-300">
-                  ⚡ Скорость: {gameSpeed.toFixed(1)}x
-                </p>
+                <p className="text-2xl text-cyan-300">{score} очков</p>
               </div>
             </div>
           )}
 
-          {/* Счетчик скорости */}
-          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full border-2 border-cyan-400 shadow-xl z-20">
-            <p className="text-sm font-heading font-bold text-cyan-600">
-              ⚡ {gameSpeed.toFixed(1)}x
-            </p>
+          <div className="absolute top-3 right-3 bg-white/90 px-3 py-1 rounded-full border border-cyan-400 text-xs font-bold text-cyan-600">
+            {gameSpeed.toFixed(1)}x
           </div>
         </div>
 
         {!gameOver && (
-          <div className="mt-4 text-center space-y-2">
+          <div className="mt-4 text-center">
             <Button
-              className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-10 py-6 rounded-full shadow-xl w-full max-w-xs mx-auto"
+              className="w-full bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl py-6 rounded-full shadow-lg"
               onClick={handleJump}
             >
               <Icon name="MoveUp" size={24} className="mr-2" />
-              Прыгнуть
+              Прыгнуть (или кликни экран / пробел)
             </Button>
-            <p className="text-sm text-muted-foreground">
-              Кликни экран, кнопку или{" "}
-              <kbd className="bg-muted px-2 py-1 rounded font-mono text-xs">
-                Пробел
-              </kbd>
-            </p>
           </div>
         )}
       </Card>
-
-      <style jsx>{`
-        @keyframes move-left {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-100px);
-          }
-        }
-        @keyframes shake {
-          0%,
-          100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-2px);
-          }
-          75% {
-            transform: translateX(2px);
-          }
-        }
-        .animate-move-left {
-          animation: move-left linear infinite;
-        }
-        .animate-shake {
-          animation: shake 0.5s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };
