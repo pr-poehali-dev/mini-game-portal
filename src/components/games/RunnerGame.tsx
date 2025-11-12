@@ -44,6 +44,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         }
       }, 30);
     }
+
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     };
@@ -103,11 +104,12 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
       </div>{" "}
       <Card className="p-6">
         <div className="text-center mb-4">
-          <h2 className="text-3xl font-heading font-bold mb-2"> Бегалка</h2>
+          <h2 className="text-3xl font-heading font-bold mb-2">⚡️Бегалка</h2>
           <p className="text-muted-foreground">
             Прыгай через препятствия! Набери 1000 очков
           </p>
         </div>
+
         <div
           className="relative w-full h-72 bg-gradient-to-b from-sky-200 via-sky-100 to-green-200 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl"
           onClick={handleJump}
@@ -115,25 +117,35 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
           <div
             className="absolute top-8 left-8 text-5xl animate-float"
             style={{ animationDelay: "0s" }}
-          ></div>
+          >
+            ☁️
+          </div>
           <div
             className="absolute top-16 right-24 text-4xl animate-float"
             style={{ animationDelay: "1s" }}
-          ></div>
+          >
+            ☁️
+          </div>
           <div
             className="absolute top-10 left-1/2 text-5xl animate-float"
             style={{ animationDelay: "2s" }}
-          ></div>
+          >
+            ☁️
+          </div>
           <div
             className="absolute top-20 left-1/3 text-3xl animate-float"
             style={{ animationDelay: "1.5s" }}
-          ></div>
+          >
+            ☁️
+          </div>
 
           <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-green-700 via-green-600 to-green-400 rounded-b-2xl">
             <div className="absolute top-0 left-0 right-0 h-3 bg-green-900/40 shadow-inner" />
             <div className="flex gap-12 absolute top-2 left-0 w-full overflow-hidden">
               {Array.from({ length: 30 }).map((_, i) => (
-                <span key={i} className="text-green-900 text-base"></span>
+                <span key={i} className="text-green-900 text-base">
+                  🌱
+                </span>
               ))}
             </div>
           </div>
@@ -149,7 +161,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             }}
           >
             <div className="relative">
-              ‍
+              🏃‍♂️‍➡️
               <div
                 className="absolute -bottom-3 left-1/2 w-10 h-2 bg-black/20 rounded-full blur-sm"
                 style={{
@@ -171,7 +183,9 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             >
               <div className="w-12 h-16 bg-gradient-to-b from-red-400 via-red-600 to-red-800 rounded-t-xl border-3 border-red-900 shadow-2xl relative">
                 <div className="absolute inset-2 bg-red-300/40 rounded-lg" />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl">
+                  ⚠️
+                </div>
               </div>
               <div className="w-14 h-3 bg-red-900 rounded-b-lg shadow-lg" />
             </div>
@@ -180,7 +194,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
           {gameOver && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-2xl z-30">
               <div className="text-white text-center space-y-4 p-8 bg-black/40 rounded-xl">
-                <p className="text-5xl"></p>
+                <p className="text-5xl">💥</p>
                 <p className="text-5xl font-heading font-bold">
                   Игра окончена!
                 </p>
@@ -191,10 +205,11 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
 
           <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border-3 border-cyan-400 shadow-lg z-20">
             <p className="text-sm font-heading font-bold text-cyan-600">
-              Скорость: {gameSpeed.toFixed(1)}x
+              ⚡️Скорость: {gameSpeed.toFixed(1)}x
             </p>
           </div>
         </div>
+
         {!gameOver && (
           <div className="mt-4 text-center">
             <Button
@@ -208,7 +223,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
               Нажми кнопку, экран или пробел для прыжка
             </p>
           </div>
-        )}{" "}
+        )}
       </Card>
     </div>
   );
