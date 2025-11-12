@@ -28,7 +28,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [birdY, setBirdY] = useState(250);
+  const [birdY, setBirdY] = useState(50);
   const [birdVelocity, setBirdVelocity] = useState(0);
   const [pipes, setPipes] = useState<Pipe[]>([]);
   const [isFlapping, setIsFlapping] = useState(false);
@@ -73,7 +73,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           passed: false,
         },
       ]);
-    }, 2000); // ОЧЕНЬ БОЛЬШОЕ расстояние
+    }, 1000); // ОЧЕНЬ БОЛЬШОЕ расстояние
 
     return () => clearInterval(spawnInterval);
   }, [gameStarted, gameOver]);
@@ -217,7 +217,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
               transform: `rotate(${gameStarted ? Math.min(birdVelocity * 3, 90) : 0}deg)`,
             }}
           >
-            🐦
+            🐥
           </div>
 
           {pipes.map((pipe) => (
