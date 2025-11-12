@@ -196,17 +196,17 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           )}
 
           {/* Облака */}
-          <div className="absolute top-8 left-12 text-5xl">Cloud</div>
-          <div className="absolute top-16 right-32 text-4xl">Cloud</div>
+          <div className="absolute top-8 left-12 text-5xl">☁️</div>
+          <div className="absolute top-16 right-32 text-4xl">☁️</div>
           <div className="absolute top-10 left-1/2 text-5xl -translate-x-1/2">
-            Cloud
+            ☁️
           </div>
-          <div className="absolute top-24 left-1/4 text-3xl">Cloud</div>
+          <div className="absolute top-24 left-1/4 text-3xl">☁️</div>
 
           {/* Счётчик очков в углу игрового поля (только во время игры) */}
           {gameStarted && !gameOver && (
             <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-cyan-400 shadow-md z-30 flex items-center gap-2">
-              <span className="text-cyan-600 font-bold text-lg">Star</span>
+              <span className="text-cyan-600 font-bold text-lg">⭐️</span>
               <span className="text-xl font-bold text-cyan-700">{score}</span>
             </div>
           )}
@@ -234,7 +234,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
               transform: `rotate(${gameStarted ? Math.min(birdVelocity * 3, 90) : 0}deg)`,
             }}
           >
-            Chick
+            🐥
           </div>
 
           {/* Трубы */}
