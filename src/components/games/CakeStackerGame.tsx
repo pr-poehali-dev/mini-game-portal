@@ -208,7 +208,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                   zIndex: stackedCakes.length - index,
                 }}
               >
-                {index === 0 ? "🎂" : "Т🍰"}
+                {index === 0 ? "🎂" : "🍰"}
               </div>
             ))}
 
@@ -276,7 +276,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             disabled={isDropping || !isSwinging}
           >
             <Icon name="MousePointerClick" size={24} className="mr-3" />
-            {isDropping ? "Тортик Падает..." : "Тортик Сбросить тортик!"}
+            {isDropping ? "Тортик Падает..." : "🍰 Сбросить тортик!"}
           </Button>
         )}
         <div className="mt-6 text-center space-y-2">
