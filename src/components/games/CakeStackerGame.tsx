@@ -13,24 +13,13 @@ interface StackedCake {
   width: number; // в px
 }
 
-interface FallingPiece {
-  id: number;
-  left: number; // в px
-  top: number; // в px (относительно видимой области)
-  width: number;
-  side: "left" | "right";
-  rotation: number;
-  velocityY: number;
-  velocityX: number;
-}
-
 const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [cameraY, setCameraY] = useState(0); // смещение камеры вверх
 
   const [currentCakeX, setCurrentCakeX] = useState(50); // в %
-  const [currentCakeY, setCurrentCakeY] = useState(80); // начальная высота падающего
+  const [currentCakeY, setCurrentCakeY] = useState(80); // высота качающегося тортика
   const [isSwinging, setIsSwinging] = useState(true);
   const [isDropping, setIsDropping] = useState(false);
 
@@ -38,17 +27,15 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     { position: 50, width: 140 },
   ]);
   const [currentWidth, setCurrentWidth] = useState(140);
-  const [fallingPieces, setFallingPieces] = useState<FallingPiece[]>([]);
 
   const swingInterval = useRef<NodeJS.Timeout | null>(null);
-  const dropInterval = useRef<NodeJS.Timeout | null>(null);
-  const animationFrame = useRef<number | null>(null);
-  const pieceIdCounter = useRef(0);
+  const dropAnimationFrame = useRef<number | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
 
   const CONTAINER_HEIGHT = 500;
   const CAKE_HEIGHT = 40;
   const GROUND_HEIGHT = 20;
+  const SWING_HEIGHT = 80; // высота качания над верхом башни
   const WIN_THRESHOLD = 15;
 
   // === КАЧАНИЕ ТОРТИКА (БЫСТРЕЕ, МЕНЬШЕ АМПЛИТУДА) ===
@@ -83,28 +70,25 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setIsDropping(true);
     setIsSwinging(false);
 
-    const targetY =
-      CONTAINER_HEIGHT -
-      GROUND_HEIGHT -
-      (stackedCakes.length + 1) * CAKE_HEIGHT +
-      cameraY;
-    let startY = currentCakeY;
+    const topOfTowerY = GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT;
+    const targetY = topOfTowerY + cameraY;
+    let currentY = currentCakeY;
 
     const drop = () => {
-      startY += 8;
+      currentY += 10;
 
-      if (startY >= targetY) {
+      if (currentY >= targetY) {
         setCurrentCakeY(targetY);
-        cancelAnimationFrame(animationFrame.current!);
+        cancelAnimationFrame(dropAnimationFrame.current!);
         stackCake();
         return;
       }
 
-      setCurrentCakeY(startY);
-      animationFrame.current = requestAnimationFrame(drop);
+      setCurrentCakeY(currentY);
+      dropAnimationFrame.current = requestAnimationFrame(drop);
     };
 
-    animationFrame.current = requestAnimationFrame(drop);
+    dropAnimationFrame.current = requestAnimationFrame(drop);
   };
 
   // === СТЕКАНИЕ ===
@@ -143,20 +127,20 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setStackedCakes(newStacked);
     setCurrentWidth(overlapWidth);
 
-    // === ПОДЪЁМ КАМЕРЫ ===
-    const stackHeight = newStacked.length * CAKE_HEIGHT;
-    const visibleHeight = CONTAINER_HEIGHT - GROUND_HEIGHT;
-    if (stackHeight > visibleHeight) {
-      setCameraY(stackHeight - visibleHeight);
-    }
+    // === ПОДЪЁМ КАМЕРЫ + НОВЫЙ ТОРТИК НАВЕРХ ===
+    const newTopOfTowerY = GROUND_HEIGHT + newStacked.length * CAKE_HEIGHT;
+    const newCameraY = Math.max(
+      0,
+      newTopOfTowerY + SWING_HEIGHT - CONTAINER_HEIGHT + 50,
+    );
+    const newSwingY = SWING_HEIGHT + newCameraY; // качание НАД башней
 
-    // === ПРОДОЛЖАЕМ ИГРУ (даже после 15) ===
-    // Игра заканчивается ТОЛЬКО при плохом попадании
+    setCameraY(newCameraY);
+    setCurrentCakeY(newSwingY);
 
     // === СЛЕДУЮЩИЙ ТОРТИК ===
     setTimeout(() => {
       setCurrentCakeX(Math.random() * 30 + 35); // в пределах амплитуды
-      setCurrentCakeY(80);
       setIsSwinging(true);
       setIsDropping(false);
     }, 500);
@@ -213,7 +197,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             className="absolute inset-0 transition-transform duration-300"
             style={{ transform: `translateY(-${cameraY}px)` }}
           >
-            {/* ТЕКУЩИЙ ПАДАЮЩИЙ ТОРТИК */}
+            {/* ТЕКУЩИЙ ПАДАЮЩИЙ ТОРТИК (КАЧАЕТСЯ НАВЕРХУ ЭКРАНА) */}
             {(isSwinging || isDropping) && !gameOver && (
               <div
                 className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
@@ -233,7 +217,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
               </div>
             )}
 
-            {/* СТЕК ТОРТИКОВ */}
+            {/* СТЕК ТОРТИКОВ (ВНИЗУ ЭКРАНА) */}
             {stackedCakes.map((cake, index) => (
               <div
                 key={index}
