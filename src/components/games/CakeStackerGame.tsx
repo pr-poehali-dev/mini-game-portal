@@ -37,12 +37,13 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const SWING_Y = 80; // фиксированная высота качания (от верха экрана)
   const DROP_SPEED = 12;
   const WIN_THRESHOLD = 15;
+  const CAMERA_START = 5; // башенка начинает опускаться после 5 тортиков
 
-  // === КАЧАНИЕ ТОРТИКА ===
+  // === КАЧАНИЕ ТОРТИКА (СКОРОСТЬ 0.9) ===
   useEffect(() => {
     if (!gameOver && isSwinging && !isDropping) {
       let direction = 1;
-      const speed = 0.9;
+      const speed = 0.9; // ← СКОРОСТЬ 0.9
       const minX = 30;
       const maxX = 70;
 
@@ -123,8 +124,11 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setStackedCakes(newStacked);
     setCurrentWidth(overlapWidth);
 
-    // === СДВИГ БАШНИ ВНИЗ ===
-    const newCameraY = cameraY + CAKE_HEIGHT;
+    // === СДВИГ БАШНИ ВНИЗ ТОЛЬКО ПОСЛЕ 5 ТОРТИКОВ ===
+    let newCameraY = cameraY;
+    if (newStacked.length >= CAMERA_START) {
+      newCameraY = cameraY + CAKE_HEIGHT;
+    }
     setCameraY(newCameraY);
 
     // === НОВЫЙ ТОРТИК ВСЕГДА В SWING_Y (НЕ СМЕЩАЕТСЯ!) ===
