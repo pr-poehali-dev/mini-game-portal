@@ -341,9 +341,7 @@ const Index = () => {
                 </div>
                 <div>
                   <p className="font-heading font-bold">Email</p>
-                  <p className="text-muted-foreground">
-                    elektrosila@example.com
-                  </p>
+                  <p className="text-muted-foreground">vk.com/electrocila</p>
                 </div>
               </div>
 
