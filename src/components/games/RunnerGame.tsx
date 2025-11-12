@@ -16,7 +16,7 @@ interface Pipe {
 }
 
 const GRAVITY = 0.6;
-const FLAP_STRENGTH = -11;
+const FLAP_STRENGTH = -8;
 const PIPE_WIDTH = 80;
 const PIPE_GAP = 400;
 const PIPE_SPEED = 4;
