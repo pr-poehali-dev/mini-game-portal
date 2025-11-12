@@ -19,6 +19,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [cameraY, setCameraY] = useState(0); // смещение всей башни вниз
 
   const [currentCakeX, setCurrentCakeX] = useState(50); // в %
+  const [currentCakeY, setCurrentCakeY] = useState(80); // позиция Y падающего тортика
   const [isSwinging, setIsSwinging] = useState(true);
   const [isDropping, setIsDropping] = useState(false);
 
@@ -64,7 +65,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [isSwinging, isDropping, gameOver]);
 
-  // === ПАДЕНИЕ ПО КЛИКУ ===
+  // === ПАДЕНИЕ ПО КЛИКУ (с плавной анимацией) ===
   const handleDrop = () => {
     if (gameOver || isDropping || !isSwinging) return;
 
@@ -74,12 +75,14 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     // Вычисляем позицию верха башни (учитывая смещение камеры)
     const topOfTowerY =
       GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY;
-    let currentDropY = SWING_Y;
 
-    const drop = () => {
-      currentDropY += DROP_SPEED;
+    // Запускаем анимацию падения
+    let dropY = SWING_Y;
+    const drop = (time: number) => {
+      dropY += DROP_SPEED;
+      setCurrentCakeY(dropY);
 
-      if (currentDropY >= topOfTowerY) {
+      if (dropY >= topOfTowerY) {
         cancelAnimationFrame(dropAnimationFrame.current!);
         stackCake();
         return;
@@ -131,8 +134,9 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     }
     setCameraY(newCameraY);
 
-    // === НОВЫЙ ТОРТИК ВСЕГДА В SWING_Y (НЕ СМЕЩАЕТСЯ!) ===
+    // === НОВЫЙ ТОРТИК ВЕРНУТЬСЯ НА SWING_Y ===
     setTimeout(() => {
+      setCurrentCakeY(SWING_Y);
       setCurrentCakeX(Math.random() * 30 + 35);
       setIsSwinging(true);
       setIsDropping(false);
@@ -217,20 +221,22 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-400 rounded-b-xl shadow-lg" />
           </div>
 
-          {/* ТЕКУЩИЙ КАЧАЮЩИЙСЯ/ПАДАЮЩИЙ ТОРТИК — ПОЗАДИ КАМЕРЫ, ВСЕГДА НАВЕРХУ */}
+          {/* ТЕКУЩИЙ КАЧАЮЩИЙСЯ/ПАДАЮЩИЙ ТОРТИК — ПОЗАДИ КАМЕРЫ, АНИМАЦИЯ ПАДЕНИЯ! */}
           {(isSwinging || isDropping) && !gameOver && (
             <div
-              className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
+              className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50 transition-all duration-0"
               style={{
-                top: SWING_Y,
+                top: `${currentCakeY}px`,
                 left: `${currentCakeX}%`,
                 width: `${currentWidth}px`,
                 height: "40px",
                 background: `linear-gradient(135deg, ${COLORS[stackedCakes.length % COLORS.length]}, ${COLORS[(stackedCakes.length + 1) % COLORS.length]})`,
-                transform: `translateX(-50%) rotate(${isSwinging ? (currentCakeX > 50 ? -3 : 3) : 0}deg)`,
+                transform: `translateX(-50%) rotate(${isSwinging ? (currentCakeX > 50 ? -3 : 3) : 0}deg) scale(${isDropping ? 1.05 : 1})`,
                 borderRadius: "16px",
                 border: "4px solid rgba(255,255,255,0.9)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                boxShadow: isDropping
+                  ? "0 15px 40px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.5)"
+                  : "0 8px 32px rgba(0,0,0,0.2)",
                 transition: isSwinging ? "transform 0.1s ease-out" : "none",
               }}
             >
