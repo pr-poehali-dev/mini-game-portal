@@ -11,6 +11,7 @@ import Icon from "@/components/ui/icon";
 import MatchThreeGame from "@/components/games/MatchThreeGame";
 import CakeStackerGame from "@/components/games/CakeStackerGame";
 import RunnerGame from "@/components/games/RunnerGame";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 type GameType = "match3" | "stacker" | "runner" | null;
 
@@ -69,10 +70,13 @@ const Index = () => {
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-200 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
+            {/* Логотип */}
             <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-game-pink via-game-orange to-game-cyan bg-clip-text text-transparent">
-              🎮 Электросила Games
+              Электросила Games
             </h1>
-            <div className="flex gap-2 flex-wrap">
+
+            {/* ДЕСКТОП: полное меню */}
+            <div className="hidden md:flex gap-2">
               {[
                 { id: "home", label: "Главная", icon: "Home" },
                 { id: "games", label: "Игры", icon: "Gamepad2" },
@@ -91,6 +95,48 @@ const Index = () => {
                 </Button>
               ))}
             </div>
+
+            {/* МОБИЛЬНЫЙ: гамбургер */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Icon name="Menu" size={28} />
+                  <span className="sr-only">Открыть меню</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64 p-6">
+                <div className="flex flex-col space-y-4 mt-8">
+                  {[
+                    { id: "home", label: "Главная", icon: "Home" },
+                    { id: "games", label: "Игры", icon: "Gamepad2" },
+                    { id: "tournament", label: "Турнир", icon: "Trophy" },
+                    { id: "contact", label: "Контакты", icon: "Mail" },
+                    { id: "about", label: "О нас", icon: "Users" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setCurrentSection(item.id as any);
+                        // Закрываем меню
+                        document
+                          .querySelector('[data-state="open"]')
+                          ?.closest('[role="dialog"]')
+                          ?.querySelector("button")
+                          ?.click();
+                      }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+                        currentSection === item.id
+                          ? "bg-game-pink text-white"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <Icon name={item.icon as any} size={20} />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </nav>
