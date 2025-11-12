@@ -20,22 +20,23 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [playerY, setPlayerY] = useState(0);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [gameSpeed, setGameSpeed] = useState(4);
+  const [leftLegAngle, setLeftLegAngle] = useState(0); // ✅ Нога 1
+  const [rightLegAngle, setRightLegAngle] = useState(0); // ✅ Нога 2
   const obstacleIdRef = useRef(0);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ АНИМАЦИЯ НОГ (простая, без багов)
-  const [legAnim, setLegAnim] = useState(0);
-
+  // ✅ АНИМАЦИЯ НОГ (отдельные состояния)
   useEffect(() => {
     if (!gameOver && !isJumping) {
       const legInterval = setInterval(() => {
-        setLegAnim((prev) => 1 - prev);
-      }, 150);
+        setLeftLegAngle((prev) => (prev === 20 ? -20 : 20));
+        setRightLegAngle((prev) => (prev === -20 ? 20 : -20));
+      }, 120); // Быстрее бег
       return () => clearInterval(legInterval);
     }
   }, [gameOver, isJumping]);
 
-  // ✅ СПАВН ПРЕПЯТСТВИЙ (реже + без наложений)
+  // Спавн препятствий
   useEffect(() => {
     const spawnInterval = setInterval(
       () => {
@@ -44,7 +45,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         }
       },
       2000 - gameSpeed * 50,
-    ); // 2 сек базово
+    );
 
     return () => clearInterval(spawnInterval);
   }, [gameOver, gameSpeed, obstacles.length]);
@@ -71,30 +72,29 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [gameOver, gameSpeed, score]);
 
-  // ✅ ПРЫЖОК (как было, но выше)
+  // ✅ БЫСТРЫЙ ПРЫЖОК (0.6 сек)
   useEffect(() => {
     if (isJumping) {
       let jumpProgress = 0;
       const jumpInterval = setInterval(() => {
-        jumpProgress += 0.1;
+        jumpProgress += 0.2; // Быстрее!
         if (jumpProgress <= Math.PI) {
-          setPlayerY(Math.sin(jumpProgress) * 140); // Выше!
+          setPlayerY(Math.sin(jumpProgress) * 120);
         } else {
           setPlayerY(0);
           setIsJumping(false);
           clearInterval(jumpInterval);
         }
-      }, 20);
+      }, 16); // 60 FPS
       return () => clearInterval(jumpInterval);
     }
   }, [isJumping]);
 
-  // ✅ КОЛЛИЗИЯ (точно настроена!)
+  // Коллизия
   useEffect(() => {
     if (gameOver) return;
 
     for (const obs of obstacles) {
-      // Препятствие: 70-120px, игрок на земле: playerY < 20
       if (obs.x > 70 && obs.x < 120 && playerY < 25) {
         setGameOver(true);
         onGameEnd(score, score >= 1000 ? "win" : "lose");
@@ -106,6 +106,9 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
   const handleJump = () => {
     if (!isJumping && !gameOver) {
       setIsJumping(true);
+      // Сброс ног при прыжке
+      setLeftLegAngle(0);
+      setRightLegAngle(0);
     }
   };
 
@@ -168,44 +171,59 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           </div>
 
-          {/* ✅ ЧЕЛОВЕЧЕК (отзеркален + анимация ног) */}
+          {/* ✅ НОВЫЙ ЧЕЛОВЕЧЕК (без тени!) */}
           <div
-            className="absolute w-20 h-20 flex items-center justify-center text-6xl transition-all duration-200 z-20 shadow-2xl"
+            className="absolute w-24 h-24 flex items-end justify-center transition-all duration-200 z-20 shadow-2xl"
             style={{
-              left: "75px",
-              bottom: `${85 + playerY}px`,
-              transform: `scaleX(-1) ${isJumping ? "scale(1.1)" : "scale(1)"}`,
+              left: "70px",
+              bottom: `${80 + playerY}px`,
+              transform: `scaleX(-1) ${isJumping ? "scale(1.05)" : "scale(1)"}`,
             }}
           >
-            <div className="relative">
-              🏃
-              {/* ✅ ПРОСТАЯ АНИМАЦИЯ НОГ */}
+            <div className="relative w-full h-full flex items-end justify-center">
+              {/* Туловище */}
               <div
-                className="absolute -bottom-2 left-2 w-3 h-6 bg-skin-400 rounded-l-full"
+                className="w-12 h-16 bg-gradient-to-b from-orange-400 to-orange-500 rounded-2xl border-4 border-orange-600 shadow-lg flex items-center justify-center relative"
                 style={{
-                  transform: `rotate(${legAnim ? "25deg" : "-25deg"}) translateY(2px)`,
-                  transition: "transform 0.15s ease-out",
+                  transform: isJumping ? "rotate(-10deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s ease-out",
+                }}
+              >
+                <div className="text-2xl">⚡</div>
+
+                {/* Голова */}
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-full border-4 border-yellow-600 shadow-lg" />
+              </div>
+
+              {/* ✅ ЛЕВАЯ НОГА (отдельно анимирована) */}
+              <div
+                className="absolute w-4 h-12 bg-gradient-to-b from-orange-600 to-orange-700 rounded-r-full border-2 border-orange-800 shadow-md"
+                style={{
+                  bottom: "-12px",
+                  left: "2px",
+                  transform: `rotate(${leftLegAngle}deg) translateY(-2px)`,
+                  transition: "transform 0.12s ease-out",
+                  originX: "center",
+                  originY: "top",
                 }}
               />
+
+              {/* ✅ ПРАВАЯ НОГА (отдельно анимирована) */}
               <div
-                className="absolute -bottom-2 right-2 w-3 h-6 bg-skin-400 rounded-r-full"
+                className="absolute w-4 h-12 bg-gradient-to-b from-orange-600 to-orange-700 rounded-l-full border-2 border-orange-800 shadow-md"
                 style={{
-                  transform: `rotate(${legAnim ? "-25deg" : "25deg"}) translateY(2px)`,
-                  transition: "transform 0.15s ease-out",
-                }}
-              />
-              {/* Тень */}
-              <div
-                className="absolute -bottom-1 left-1/2 w-12 h-2 bg-black/30 rounded-full blur-sm"
-                style={{
-                  transform: "translateX(-50%)",
-                  opacity: Math.max(0.3, 1 - playerY / 150),
+                  bottom: "-12px",
+                  right: "2px",
+                  transform: `rotate(${rightLegAngle}deg) translateY(-2px)`,
+                  transition: "transform 0.12s ease-out",
+                  originX: "center",
+                  originY: "top",
                 }}
               />
             </div>
           </div>
 
-          {/* ✅ МЕНЬШИЕ ПРЕПЯТСТВИЯ */}
+          {/* Препятствия */}
           {obstacles.map((obs) => (
             <div
               key={obs.id}
