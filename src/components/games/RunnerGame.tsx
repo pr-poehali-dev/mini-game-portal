@@ -17,7 +17,7 @@ interface Pipe {
 
 const GRAVITY = 0.6;
 const FLAP_STRENGTH = -11;
-const PIPE_WIDTH = 160;
+const PIPE_WIDTH = 80;
 const PIPE_GAP = 160;
 const PIPE_SPEED = 4;
 const BIRD_SIZE = 48;
@@ -73,7 +73,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           passed: false,
         },
       ]);
-    }, 4000); // ОЧЕНЬ БОЛЬШОЕ расстояние
+    }, 400); // ОЧЕНЬ БОЛЬШОЕ расстояние
 
     return () => clearInterval(spawnInterval);
   }, [gameStarted, gameOver]);
@@ -288,7 +288,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
               className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-8 py-6 rounded-full shadow-lg transform transition active:scale-95"
               onClick={flap}
             >
-              <Icon name="MoveUp" size={24} className="mr-2" />
+              <Icon name="MoveUp" size={10} className="mr-2" />
               Взмах (Пробел)
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
