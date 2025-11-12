@@ -340,7 +340,7 @@ const Index = () => {
                   <Icon name="Mail" size={24} className="text-white" />
                 </div>
                 <div>
-                  <p className="font-heading font-bold">Email</p>
+                  <p className="font-heading font-bold">ВКонтакте</p>
                   <p className="text-muted-foreground">vk.com/electrocila</p>
                 </div>
               </div>
