@@ -208,7 +208,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                   zIndex: stackedCakes.length - index,
                 }}
               >
-                {index === 0 ? "Торт" : "Тортик"}
+                {index === 0 ? "🎂" : "Т🍰"}
               </div>
             ))}
 
