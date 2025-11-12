@@ -13,29 +13,42 @@ interface StackedCake {
   width: number;
 }
 
+interface FallingPiece {
+  id: number;
+  left: number; // в px
+  width: number;
+  side: "left" | "right";
+  rotation: number;
+  velocityY: number;
+  velocityX: number;
+}
+
 const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
 
-  // Текущий тортик
-  const [currentCakeX, setCurrentCakeX] = useState(50); // центр в %
-  const [currentCakeY, setCurrentCakeY] = useState(50); // фиксированная высота сверху
-  const [isSwinging, setIsSwinging] = useState(true); // качается
-  const [isDropping, setIsDropping] = useState(false); // падает
+  const [currentCakeX, setCurrentCakeX] = useState(50);
+  const [currentCakeY, setCurrentCakeY] = useState(50);
+  const [isSwinging, setIsSwinging] = useState(true);
+  const [isDropping, setIsDropping] = useState(false);
 
   const [stackedCakes, setStackedCakes] = useState<StackedCake[]>([
     { position: 50, width: 120 },
   ]);
   const [currentWidth, setCurrentWidth] = useState(120);
+  const [fallingPieces, setFallingPieces] = useState<FallingPiece[]>([]);
 
   const swingInterval = useRef<NodeJS.Timeout | null>(null);
   const dropInterval = useRef<NodeJS.Timeout | null>(null);
+  const pieceIdCounter = useRef(0);
 
-  // === КАЧАНИЕ ВЛЕВО-ВПРАВО ===
+  const gameAreaRef = useRef<HTMLDivElement>(null);
+
+  // === КАЧАНИЕ ВЛЕВО-ВПРАВО (МЕДЛЕННЕЕ) ===
   useEffect(() => {
     if (!gameOver && isSwinging && !isDropping) {
       let direction = 1;
-      const speed = 0.8;
+      const speed = 0.5; // ← МЕДЛЕННЕЕ
 
       swingInterval.current = setInterval(() => {
         setCurrentCakeX((prev) => {
@@ -78,25 +91,75 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     }, 16);
   };
 
-  // === СТЕКАНИЕ ===
+  // === СТЕКАНИЕ + ОТВАЛИВАНИЕ КУСКОВ ===
   const stackCake = () => {
+    const containerWidth = 600;
     const lastCake = stackedCakes[stackedCakes.length - 1];
-    const pixelDiff = Math.abs(
-      (currentCakeX / 100) * 600 - (lastCake.position / 100) * 600,
-    );
-    const overlap = Math.max(0, currentWidth - pixelDiff);
+    const currentCenterPx = (currentCakeX / 100) * containerWidth;
+    const lastCenterPx = (lastCake.position / 100) * containerWidth;
 
-    if (overlap < 15) {
+    const leftEdge = currentCenterPx - currentWidth / 2;
+    const rightEdge = currentCenterPx + currentWidth / 2;
+    const lastLeft = lastCenterPx - lastCake.width / 2;
+    const lastRight = lastCenterPx + lastCake.width / 2;
+
+    const overlapLeft = Math.max(leftEdge, lastLeft);
+    const overlapRight = Math.min(rightEdge, lastRight);
+    const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+
+    if (overlapWidth < 15) {
       setGameOver(true);
       return;
     }
 
-    const newWidth = overlap;
-    const newScore = score + Math.floor(overlap * 2);
+    const newWidth = overlapWidth;
+    const newScore = score + Math.floor(overlapWidth * 2);
     setScore(newScore);
+
+    const newPieces: FallingPiece[] = [];
+
+    // Левая часть
+    if (leftEdge < lastLeft) {
+      const pieceWidth = lastLeft - leftEdge;
+      if (pieceWidth > 5) {
+        newPieces.push({
+          id: pieceIdCounter.current++,
+          left: leftEdge,
+          width: pieceWidth,
+          side: "left",
+          rotation: 0,
+          velocityY: 2 + Math.random() * 3,
+          velocityX: -1.5 - Math.random() * 2,
+        });
+      }
+    }
+
+    // Правая часть
+    if (rightEdge > lastRight) {
+      const pieceWidth = rightEdge - lastRight;
+      if (pieceWidth > 5) {
+        newPieces.push({
+          id: pieceIdCounter.current++,
+          left: lastRight,
+          width: pieceWidth,
+          side: "right",
+          rotation: 0,
+          velocityY: 2 + Math.random() * 3,
+          velocityX: 1.5 + Math.random() * 2,
+        });
+      }
+    }
+
+    if (newPieces.length > 0) {
+      setFallingPieces((prev) => [...prev, ...newPieces]);
+    }
+
+    const newPosition =
+      ((overlapLeft + overlapRight) / 2 / containerWidth) * 100;
+
     setStackedCakes([
       ...stackedCakes,
-      { position: currentCakeX, width: newWidth },
+      { position: newPosition, width: newWidth },
     ]);
     setCurrentWidth(newWidth);
 
@@ -111,8 +174,31 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
       setCurrentCakeY(50);
       setIsSwinging(true);
       setIsDropping(false);
-    }, 500);
+    }, 600);
   };
+
+  // === АНИМАЦИЯ ПАДАЮЩИХ КУСКОВ ===
+  useEffect(() => {
+    if (fallingPieces.length === 0) return;
+
+    const interval = setInterval(() => {
+      setFallingPieces((pieces) =>
+        pieces
+          .map((p) => ({
+            ...p,
+            left: p.left + p.velocityX,
+            rotation: p.rotation + (p.side === "left" ? -8 : 8),
+            velocityY: p.velocityY + 0.4,
+          }))
+          .filter((p) => {
+            const y = 500 - stackedCakes.length * 40 + 50;
+            return p.velocityY * 16 + 100 < y;
+          }),
+      );
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [fallingPieces.length, stackedCakes.length]);
 
   // === Окончание игры ===
   useEffect(() => {
@@ -148,7 +234,32 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           </p>
         </div>
 
-        <div className="relative w-full h-[500px] bg-gradient-to-b from-purple-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200">
+        <div
+          ref={gameAreaRef}
+          className="relative w-full h-[500px] bg-gradient-to-b from-purple-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200"
+        >
+          {/* Падающие куски */}
+          {fallingPieces.map((piece) => (
+            <div
+              key={piece.id}
+              className="absolute flex items-center justify-center text-xl font-bold shadow-lg"
+              style={{
+                top: `${500 - stackedCakes.length * 40 + 50}px`,
+                left: `${piece.left}px`,
+                width: `${piece.width}px`,
+                height: "35px",
+                background: `linear-gradient(135deg, ${COLORS[stackedCakes.length % COLORS.length]}, ${COLORS[(stackedCakes.length + 1) % COLORS.length]})`,
+                transform: `translateY(${piece.velocityY * 16}px) rotate(${piece.rotation}deg)`,
+                borderRadius: "8px",
+                border: "2px solid rgba(255,255,255,0.7)",
+                opacity: 1 - piece.velocityY / 15,
+                transition: "none",
+              }}
+            >
+              {piece.width > 30 ? "🍰" : "🧁"}
+            </div>
+          ))}
+
           {/* Текущий качающийся/падающий тортик */}
           {(isSwinging || isDropping) && !gameOver && (
             <div
