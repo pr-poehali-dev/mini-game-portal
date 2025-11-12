@@ -55,7 +55,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   useEffect(() => {
     if (!gameOver && isSwinging && !isDropping) {
       let direction = 1;
-      const speed = 1.2; // БЫСТРЕЕ
+      const speed = 0.95; // БЫСТРЕЕ
       const minX = 30; // МЕНЬШЕ АМПЛИТУДА
       const maxX = 70;
 
