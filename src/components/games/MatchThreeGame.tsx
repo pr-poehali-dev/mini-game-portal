@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Icon from "@/components/ui/icon";
@@ -11,43 +11,43 @@ interface GameProps {
 type CellType = "🍓" | "🍊" | "🍋" | "🍇" | "🍉" | null;
 
 const GRID_SIZE = 6;
-const MATCH_TARGET = 500;
-const MOVES_LIMIT = 20;
+const MATCH_TARGET = 1000; // Увеличено
+const GAME_TIME = 60; // секунд
+
 const FRUITS: CellType[] = ["🍓", "🍊", "🍋", "🍇", "🍉"];
 
 const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
   const [grid, setGrid] = useState<CellType[][]>([]);
   const [score, setScore] = useState(0);
-  const [moves, setMoves] = useState(MOVES_LIMIT);
+  const [timeLeft, setTimeLeft] = useState(GAME_TIME);
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(
     null,
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGameActive, setIsGameActive] = useState(true);
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ✅ 1. ГЕНЕРАЦИЯ ПОЛЯ БЕЗ КОМБИНАЦИЙ
   const hasMatches = (grid: CellType[][]): boolean => {
-    // Горизонтальные
     for (let i = 0; i < GRID_SIZE; i++) {
       for (let j = 0; j < GRID_SIZE - 2; j++) {
         if (
           grid[i][j] &&
           grid[i][j] === grid[i][j + 1] &&
           grid[i][j] === grid[i][j + 2]
-        ) {
+        )
           return true;
-        }
       }
     }
-    // Вертикальные
     for (let i = 0; i < GRID_SIZE - 2; i++) {
       for (let j = 0; j < GRID_SIZE; j++) {
         if (
           grid[i][j] &&
           grid[i][j] === grid[i + 1][j] &&
           grid[i][j] === grid[i + 2][j]
-        ) {
+        )
           return true;
-        }
       }
     }
     return false;
@@ -56,7 +56,6 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
   const createValidGrid = (): CellType[][] => {
     let attempts = 0;
     let newGrid: CellType[][];
-
     do {
       newGrid = Array(GRID_SIZE)
         .fill(null)
@@ -66,30 +65,44 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
             .map(() => FRUITS[Math.floor(Math.random() * FRUITS.length)]),
         );
       attempts++;
-    } while (hasMatches(newGrid) && attempts < 100); // Максимум 100 попыток
-
+    } while (hasMatches(newGrid) && attempts < 100);
     return newGrid;
   };
 
+  // Инициализация поля
   useEffect(() => {
     setGrid(createValidGrid());
   }, []);
 
+  // Таймер
   useEffect(() => {
-    if (moves === 0) {
-      const result = score >= MATCH_TARGET ? "win" : "lose";
-      onGameEnd(score, result);
-    }
-  }, [moves]);
+    if (!isGameActive) return;
 
-  // ✅ 2. НАХОЖДЕНИЕ И УДАЛЕНИЕ КОМБИНАЦИЙ
+    intervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          const result = score >= MATCH_TARGET ? "win" : "lose";
+          onGameEnd(score, result);
+          setIsGameActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isGameActive, score]);
+
+  // ✅ 2. УДАЛЕНИЕ МАТЧЕЙ
   const findAndRemoveMatches = (currentGrid: CellType[][]): boolean => {
     let hasMatches = false;
     const toRemove: boolean[][] = Array(GRID_SIZE)
       .fill(null)
       .map(() => Array(GRID_SIZE).fill(false));
 
-    // Горизонтальные
     for (let i = 0; i < GRID_SIZE; i++) {
       for (let j = 0; j < GRID_SIZE - 2; j++) {
         if (
@@ -103,7 +116,6 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
       }
     }
 
-    // Вертикальные
     for (let i = 0; i < GRID_SIZE - 2; i++) {
       for (let j = 0; j < GRID_SIZE; j++) {
         if (
@@ -119,7 +131,6 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
 
     if (hasMatches) {
       let matchCount = 0;
-      // Удаляем
       for (let i = 0; i < GRID_SIZE; i++) {
         for (let j = 0; j < GRID_SIZE; j++) {
           if (toRemove[i][j]) {
@@ -134,17 +145,14 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
     return hasMatches;
   };
 
-  // ✅ 3. ПАДЕНИЕ ФИГУРОК ВНИЗ
+  // ✅ 3. ПАДЕНИЕ
   const dropFruits = (currentGrid: CellType[][]): CellType[][] => {
     for (let j = 0; j < GRID_SIZE; j++) {
       let writeIndex = GRID_SIZE - 1;
-
       for (let i = GRID_SIZE - 1; i >= 0; i--) {
         if (currentGrid[i][j] !== null) {
           currentGrid[writeIndex][j] = currentGrid[i][j];
-          if (writeIndex !== i) {
-            currentGrid[i][j] = null;
-          }
+          if (writeIndex !== i) currentGrid[i][j] = null;
           writeIndex--;
         }
       }
@@ -164,34 +172,28 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
     return currentGrid;
   };
 
-  // ✅ 5. ЦЕПНАЯ РЕАКЦИЯ (каскад матчей)
+  // ✅ 5. КАСКАД
   const processMatches = async (currentGrid: CellType[][]) => {
     setIsProcessing(true);
-
     while (findAndRemoveMatches(currentGrid)) {
-      await new Promise((resolve) => setTimeout(resolve, 200)); // Пауза для анимации
-
+      await new Promise((resolve) => setTimeout(resolve, 200));
       dropFruits(currentGrid);
       await new Promise((resolve) => setTimeout(resolve, 200));
-
       fillFromTop(currentGrid);
       await new Promise((resolve) => setTimeout(resolve, 200));
-
-      setGrid([...currentGrid.map((r) => [...r])]); // Обновляем UI
+      setGrid([...currentGrid.map((r) => [...r])]);
     }
-
     setIsProcessing(false);
   };
 
   const handleCellClick = async (row: number, col: number) => {
-    if (moves === 0 || isProcessing) return;
+    if (!isGameActive || timeLeft === 0 || isProcessing) return;
 
     if (!selectedCell) {
       setSelectedCell([row, col]);
     } else {
       const [selectedRow, selectedCol] = selectedCell;
 
-      // Отмена выбора (клик на ту же клетку)
       if (row === selectedRow && col === selectedCol) {
         setSelectedCell(null);
         return;
@@ -203,24 +205,23 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
 
       if (isAdjacent) {
         const newGrid = grid.map((r) => [...r]);
-
-        // Меняем местами
         [newGrid[row][col], newGrid[selectedRow][selectedCol]] = [
           newGrid[selectedRow][selectedCol],
           newGrid[row][col],
         ];
 
-        setGrid([...newGrid.map((r) => [...r])]); // Показываем swap
-        setMoves((m) => m - 1);
+        setGrid([...newGrid.map((r) => [...r])]);
         setSelectedCell(null);
 
-        // Обрабатываем каскад
         await processMatches(newGrid);
       } else {
         setSelectedCell([row, col]);
       }
     }
   };
+
+  // Прогресс таймера
+  const progress = (timeLeft / GAME_TIME) * 100;
 
   return (
     <div className="space-y-6 animate-bounce-in max-w-2xl mx-auto">
@@ -237,9 +238,9 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
             </p>
           </Card>
           <Card className="px-4 py-2">
-            <p className="text-sm text-muted-foreground">Ходов</p>
+            <p className="text-sm text-muted-foreground">Время</p>
             <p className="text-2xl font-heading font-bold text-game-orange">
-              {moves}
+              {timeLeft}s
             </p>
           </Card>
         </div>
@@ -248,21 +249,30 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
       <Card className="p-6">
         <div className="text-center mb-4">
           <h2 className="text-3xl font-heading font-bold mb-2">🍓 Три в ряд</h2>
-          <p className="text-muted-foreground">Собери {MATCH_TARGET} очков!</p>
-          <div className="mt-3 flex justify-center gap-2">
-            <div
-              className={`px-4 py-2 rounded-full font-heading font-bold ${
-                moves > 10
-                  ? "bg-green-100 text-green-700"
-                  : moves > 5
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-red-100 text-red-700 animate-pulse-slow"
-              }`}
-            >
-              <Icon name="Zap" size={16} className="inline mr-1" />
-              {moves} {moves === 1 ? "ход" : moves < 5 ? "хода" : "ходов"}{" "}
-              осталось
+          <p className="text-muted-foreground">
+            Набери {MATCH_TARGET} очков за {GAME_TIME} сек!
+          </p>
+
+          {/* Прогресс-бар таймера */}
+          <div className="mt-3 mx-auto max-w-xs">
+            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-1000 ${
+                  timeLeft > 20
+                    ? "bg-green-500"
+                    : timeLeft > 10
+                      ? "bg-yellow-500"
+                      : "bg-red-500 animate-pulse"
+                }`}
+                style={{ width: `${progress}%` }}
+              />
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {timeLeft > 0 ? `Осталось: ${timeLeft} сек` : "Время вышло!"}
+            </p>
+          </div>
+
+          <div className="mt-3 flex justify-center gap-2">
             <div
               className={`px-4 py-2 rounded-full font-heading font-bold ${
                 score >= MATCH_TARGET
@@ -287,14 +297,14 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
               <button
                 key={`${i}-${j}`}
                 onClick={() => handleCellClick(i, j)}
-                disabled={isProcessing}
+                disabled={isProcessing || !isGameActive || timeLeft === 0}
                 className={`aspect-square text-4xl rounded-xl transition-all duration-200 hover:scale-110 shadow-lg border-2 ${
                   selectedCell?.[0] === i && selectedCell?.[1] === j
                     ? "bg-game-yellow border-game-yellow scale-110 shadow-2xl"
                     : cell
                       ? "bg-gradient-to-br from-white to-purple-50 hover:from-game-pink/20 hover:to-pink-50 border-purple-200"
                       : "bg-gray-100 border-gray-300 cursor-not-allowed"
-                } ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isProcessing || !isGameActive ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {cell}
               </button>
