@@ -246,7 +246,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           {gameOver && (
             <div className="absolute inset-0 bg-black/80 flex items-center justify-center backdrop-blur-md rounded-2xl z-50">
               <div className="text-white text-center space-y-6 p-12 bg-gradient-to-b from-purple-900/90 to-pink-900/90 rounded-3xl border-4 border-white/20">
-                <p className="text-7xl animate-bounce">Торт</p>
+                <p className="text-7xl animate-bounce">🎂</p>
                 <p className="text-4xl font-heading font-bold tracking-wide">
                   Игра окончена!
                 </p>
