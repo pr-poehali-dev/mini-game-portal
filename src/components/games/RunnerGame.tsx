@@ -217,7 +217,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
             <div className="flex gap-8 absolute top-3 left-0 w-full overflow-hidden">
               {Array.from({ length: 50 }).map((_, i) => (
                 <span key={i} className="text-green-900 text-lg">
-                  Grass
+                  🌿
                 </span>
               ))}
             </div>
