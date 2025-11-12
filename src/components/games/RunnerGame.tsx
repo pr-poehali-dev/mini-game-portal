@@ -18,7 +18,7 @@ interface Pipe {
 const GRAVITY = 0.6;
 const FLAP_STRENGTH = -11;
 const PIPE_WIDTH = 80;
-const PIPE_GAP = 150;
+const PIPE_GAP = 160;
 const PIPE_SPEED = 4;
 const BIRD_SIZE = 48;
 const GROUND_HEIGHT = 96;
@@ -58,16 +58,22 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
     if (!gameStarted || gameOver) return;
 
     const spawnInterval = setInterval(() => {
+      // Разнообразие: то сверху, то снизу
+      const isTopPipe = Math.random() < 0.5;
+      const gapY = isTopPipe
+        ? 120 + Math.random() * 80 // зазор ближе к верху
+        : 320 - Math.random() * 80; // зазор ближе к низу
+
       setPipes((prev) => [
         ...prev.filter((p) => p.x > -PIPE_WIDTH - 50),
         {
           id: pipeIdRef.current++,
           x: 650,
-          gapY: 180 + Math.random() * 140,
+          gapY,
           passed: false,
         },
       ]);
-    }, 3000); // УВЕЛИЧЕНО расстояние между трубами (было 2200)
+    }, 4000); // ОЧЕНЬ БОЛЬШОЕ расстояние
 
     return () => clearInterval(spawnInterval);
   }, [gameStarted, gameOver]);
@@ -81,7 +87,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
         const newY = y + birdVelocity;
         if (newY <= 0 || newY >= SKY_HEIGHT - GROUND_HEIGHT - BIRD_SIZE) {
           setGameOver(true);
-          onGameEnd(score, score >= 10 ? "win" : "lose");
+          onGameEnd(score, score >= 30 ? "win" : "lose"); // Увеличена цель
           return y;
         }
         return newY;
@@ -111,7 +117,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           const gapBottom = pipe.gapY + PIPE_GAP / 2;
           if (birdTop < gapTop || birdBottom > gapBottom) {
             setGameOver(true);
-            onGameEnd(score, score >= 10 ? "win" : "lose");
+            onGameEnd(score, score >= 30 ? "win" : "lose");
           }
         }
       });
@@ -164,7 +170,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
         <div className="text-center mb-4">
           <h2 className="text-3xl font-heading font-bold mb-2">Flappy Bird</h2>
           <p className="text-muted-foreground">
-            Лети через трубы! Набери 10 очков
+            Лети через трубы! Набери 30 очков
           </p>
         </div>
 
@@ -208,10 +214,10 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
               top: `${birdY}px`,
               width: `${BIRD_SIZE}px`,
               height: `${BIRD_SIZE}px`,
-              transform: `rotate(${gameStarted ? Math.min(birdVelocity * 3, 90) : 0}deg) scale(${isFlapping ? 1.1 : 1})`,
+              transform: `rotate(${gameStarted ? Math.min(birdVelocity * 3, 90) : 0}deg)`,
             }}
           >
-            {isFlapping ? "🪶" : "🐦"}
+            🐦
           </div>
 
           {pipes.map((pipe) => (
@@ -251,7 +257,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
                 </p>
                 <p className="text-3xl">Счёт: {score}</p>
                 <p className="text-xl font-medium">
-                  {score >= 10 ? "Победа! Ты мастер!" : "Попробуй ещё раз!"}
+                  {score >= 30 ? "Победа! Ты мастер!" : "Попробуй ещё раз!"}
                 </p>
               </div>
             </div>
