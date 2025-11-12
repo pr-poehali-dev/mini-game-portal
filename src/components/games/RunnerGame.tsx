@@ -18,7 +18,7 @@ interface Pipe {
 const GRAVITY = 0.6;
 const FLAP_STRENGTH = -11;
 const PIPE_WIDTH = 80;
-const PIPE_GAP = 160;
+const PIPE_GAP = 400;
 const PIPE_SPEED = 4;
 const BIRD_SIZE = 48;
 const GROUND_HEIGHT = 96;
@@ -73,7 +73,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           passed: false,
         },
       ]);
-    }, 400); // ОЧЕНЬ БОЛЬШОЕ расстояние
+    }, 2000); // ОЧЕНЬ БОЛЬШОЕ расстояние
 
     return () => clearInterval(spawnInterval);
   }, [gameStarted, gameOver]);
