@@ -156,6 +156,24 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
         <div className="text-center mb-4">
           <h2 className="text-3xl font-heading font-bold mb-2">🍓 Три в ряд</h2>
           <p className="text-muted-foreground">Собери {MATCH_TARGET} очков!</p>
+          <div className="mt-3 flex justify-center gap-2">
+            <div className={`px-4 py-2 rounded-full font-heading font-bold ${
+              moves > 10 ? 'bg-green-100 text-green-700' : 
+              moves > 5 ? 'bg-yellow-100 text-yellow-700' : 
+              'bg-red-100 text-red-700 animate-pulse-slow'
+            }`}>
+              <Icon name="Zap" size={16} className="inline mr-1" />
+              {moves} {moves === 1 ? 'ход' : moves < 5 ? 'хода' : 'ходов'} осталось
+            </div>
+            <div className={`px-4 py-2 rounded-full font-heading font-bold ${
+              score >= MATCH_TARGET ? 'bg-green-100 text-green-700' :
+              score >= MATCH_TARGET * 0.7 ? 'bg-yellow-100 text-yellow-700' :
+              'bg-pink-100 text-pink-700'
+            }`}>
+              <Icon name="Target" size={16} className="inline mr-1" />
+              {score}/{MATCH_TARGET}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}>

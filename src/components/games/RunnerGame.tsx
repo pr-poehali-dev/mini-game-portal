@@ -118,32 +118,52 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         </div>
 
         <div
-          className="relative h-64 bg-gradient-to-b from-cyan-50 to-blue-100 rounded-xl overflow-hidden cursor-pointer"
+          className="relative h-64 bg-gradient-to-b from-cyan-50 to-blue-100 rounded-xl overflow-hidden cursor-pointer border-4 border-game-cyan/30"
           onClick={handleJump}
         >
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-green-600 to-green-400" />
+          <div className="absolute top-8 left-4 text-4xl animate-float" style={{ animationDelay: '0s' }}>☁️</div>
+          <div className="absolute top-12 right-20 text-3xl animate-float" style={{ animationDelay: '1s' }}>☁️</div>
+          <div className="absolute top-6 left-1/2 text-4xl animate-float" style={{ animationDelay: '2s' }}>☁️</div>
           
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-800" />
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-green-700 via-green-500 to-green-400">
+            <div className="absolute top-0 left-0 right-0 h-2 bg-green-800/50" />
+            <div className="flex gap-8 absolute top-1 left-0 animate-pulse">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <span key={i} className="text-green-800 text-xs">🌱</span>
+              ))}
+            </div>
+          </div>
 
           <div
-            className="absolute w-12 h-12 bg-game-pink rounded-lg flex items-center justify-center text-2xl transition-all shadow-lg"
+            className="absolute w-14 h-14 flex items-center justify-center text-4xl transition-all duration-100 z-10"
             style={{
               left: '80px',
-              bottom: `${48 + playerY}px`,
+              bottom: `${64 + playerY}px`,
+              transform: isJumping ? 'rotate(-10deg)' : 'rotate(0deg)',
             }}
           >
-            🏃
+            <div className="relative">
+              🏃
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-black/20 rounded-full" 
+                   style={{ transform: `translateX(-50%) scale(${1 - playerY / 200})` }} />
+            </div>
           </div>
 
           {obstacles.map((obs) => (
             <div
               key={obs.id}
-              className="absolute w-8 h-12 bg-game-orange rounded-lg shadow-lg"
+              className="absolute flex flex-col items-center"
               style={{
                 left: `${obs.x}px`,
-                bottom: '48px',
+                bottom: '64px',
               }}
-            />
+            >
+              <div className="w-10 h-14 bg-gradient-to-b from-red-500 to-red-700 rounded-t-lg border-2 border-red-800 shadow-lg relative">
+                <div className="absolute inset-1 bg-red-400/30 rounded" />
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl">⚠️</div>
+              </div>
+              <div className="w-12 h-2 bg-red-800 rounded-b" />
+            </div>
           ))}
 
           {gameOver && (
@@ -155,10 +175,8 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           )}
 
-          <div className="absolute top-4 left-4 right-4 flex justify-between text-muted-foreground text-sm">
-            <span>☁️</span>
-            <span>☁️</span>
-            <span>☁️</span>
+          <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full border-2 border-game-cyan">
+            <p className="text-xs font-heading font-bold text-game-cyan">Скорость: {gameSpeed.toFixed(1)}x</p>
           </div>
         </div>
 
