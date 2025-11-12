@@ -238,7 +238,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 transition: "none", // АНИМАЦИЯ ЧЕРЕЗ requestAnimationFrame
               }}
             >
-              Тортик
+              🍰
             </div>
           )}
 
