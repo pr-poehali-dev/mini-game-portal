@@ -20,18 +20,16 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [playerY, setPlayerY] = useState(0);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [gameSpeed, setGameSpeed] = useState(4);
-  const [leftLegAngle, setLeftLegAngle] = useState(0); // ✅ Нога 1
-  const [rightLegAngle, setRightLegAngle] = useState(0); // ✅ Нога 2
+  const [legOffset, setLegOffset] = useState(0); // ✅ Смещение ног влево-вправо
   const obstacleIdRef = useRef(0);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ АНИМАЦИЯ НОГ (отдельные состояния)
+  // ✅ АНИМАЦИЯ НОГ (влево-вправо как у 🏃)
   useEffect(() => {
     if (!gameOver && !isJumping) {
       const legInterval = setInterval(() => {
-        setLeftLegAngle((prev) => (prev === 20 ? -20 : 20));
-        setRightLegAngle((prev) => (prev === -20 ? 20 : -20));
-      }, 120); // Быстрее бег
+        setLegOffset((prev) => (prev + 16) % 360); // Круговое движение
+      }, 100);
       return () => clearInterval(legInterval);
     }
   }, [gameOver, isJumping]);
@@ -72,30 +70,31 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [gameOver, gameSpeed, score]);
 
-  // ✅ БЫСТРЫЙ ПРЫЖОК (0.6 сек)
+  // ✅ БЫСТРЫЙ РЕЗКИЙ ПРЫЖОК (0.4 сек!)
   useEffect(() => {
     if (isJumping) {
       let jumpProgress = 0;
       const jumpInterval = setInterval(() => {
-        jumpProgress += 0.2; // Быстрее!
+        jumpProgress += 0.35; // СУПЕР БЫСТРО!
         if (jumpProgress <= Math.PI) {
-          setPlayerY(Math.sin(jumpProgress) * 120);
+          setPlayerY(Math.sin(jumpProgress) * 110);
         } else {
           setPlayerY(0);
           setIsJumping(false);
           clearInterval(jumpInterval);
         }
-      }, 16); // 60 FPS
+      }, 12); // 83 FPS
       return () => clearInterval(jumpInterval);
     }
   }, [isJumping]);
 
-  // Коллизия
+  // Коллизия (игрок слева - 70-120px)
   useEffect(() => {
     if (gameOver) return;
 
     for (const obs of obstacles) {
-      if (obs.x > 70 && obs.x < 120 && playerY < 25) {
+      if (obs.x > 75 && obs.x < 115 && playerY < 20) {
+        // Точнее
         setGameOver(true);
         onGameEnd(score, score >= 1000 ? "win" : "lose");
         break;
@@ -106,9 +105,6 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
   const handleJump = () => {
     if (!isJumping && !gameOver) {
       setIsJumping(true);
-      // Сброс ног при прыжке
-      setLeftLegAngle(0);
-      setRightLegAngle(0);
     }
   };
 
@@ -171,53 +167,39 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           </div>
 
-          {/* ✅ НОВЫЙ ЧЕЛОВЕЧЕК (без тени!) */}
+          {/* ✅ ЗЕРКАЛЬНЫЙ 🏃 С АНИМАЦИЕЙ НОГ */}
           <div
-            className="absolute w-24 h-24 flex items-end justify-center transition-all duration-200 z-20 shadow-2xl"
+            className="absolute w-20 h-20 flex items-center justify-center text-6xl transition-all duration-150 z-20 shadow-2xl"
             style={{
-              left: "70px",
-              bottom: `${80 + playerY}px`,
-              transform: `scaleX(-1) ${isJumping ? "scale(1.05)" : "scale(1)"}`,
+              left: "75px",
+              bottom: `${85 + playerY}px`,
+              transform: `scaleX(-1) ${isJumping ? "rotate(-15deg) scale(1.1)" : "scale(1)"}`,
             }}
           >
-            <div className="relative w-full h-full flex items-end justify-center">
-              {/* Туловище */}
-              <div
-                className="w-12 h-16 bg-gradient-to-b from-orange-400 to-orange-500 rounded-2xl border-4 border-orange-600 shadow-lg flex items-center justify-center relative"
+            <div className="relative">
+              {/* ✅ ОСНОВНОЙ ЭМОДЗИ 🏃 (зеркальный) */}
+              <span
                 style={{
-                  transform: isJumping ? "rotate(-10deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s ease-out",
+                  filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
+                  transform: `translateY(${Math.sin((legOffset * Math.PI) / 180) * 3}px)`,
                 }}
               >
-                <div className="text-2xl">⚡</div>
+                🏃
+              </span>
 
-                {/* Голова */}
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-full border-4 border-yellow-600 shadow-lg" />
-              </div>
-
-              {/* ✅ ЛЕВАЯ НОГА (отдельно анимирована) */}
+              {/* ✅ АНИМАЦИЯ НОГ (влево-вправо под эмодзи) */}
               <div
-                className="absolute w-4 h-12 bg-gradient-to-b from-orange-600 to-orange-700 rounded-r-full border-2 border-orange-800 shadow-md"
+                className="absolute bottom-1 left-1/2 w-1 h-8 bg-orange-600/80 rounded-r-full shadow-md"
                 style={{
-                  bottom: "-12px",
-                  left: "2px",
-                  transform: `rotate(${leftLegAngle}deg) translateY(-2px)`,
-                  transition: "transform 0.12s ease-out",
-                  originX: "center",
-                  originY: "top",
+                  transform: `translateX(-50%) translateY(12px) skewY(${Math.sin((legOffset * Math.PI) / 180) * 15}deg)`,
+                  transition: "none",
                 }}
               />
-
-              {/* ✅ ПРАВАЯ НОГА (отдельно анимирована) */}
               <div
-                className="absolute w-4 h-12 bg-gradient-to-b from-orange-600 to-orange-700 rounded-l-full border-2 border-orange-800 shadow-md"
+                className="absolute bottom-1 right-1/2 w-1 h-8 bg-orange-600/80 rounded-l-full shadow-md"
                 style={{
-                  bottom: "-12px",
-                  right: "2px",
-                  transform: `rotate(${rightLegAngle}deg) translateY(-2px)`,
-                  transition: "transform 0.12s ease-out",
-                  originX: "center",
-                  originY: "top",
+                  transform: `translateX(50%) translateY(12px) skewY(${-Math.sin((legOffset * Math.PI) / 180) * 15}deg)`,
+                  transition: "none",
                 }}
               />
             </div>
