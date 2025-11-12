@@ -101,6 +101,8 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
   };
 
   const handleCellClick = (row: number, col: number) => {
+    if (moves === 0) return;
+    
     if (!selectedCell) {
       setSelectedCell([row, col]);
     } else {
@@ -114,19 +116,12 @@ const MatchThreeGame = ({ onGameEnd, onBack }: GameProps) => {
         [newGrid[row][col], newGrid[selectedRow][selectedCol]] = 
         [newGrid[selectedRow][selectedCol], newGrid[row][col]];
 
-        let hasMatches = false;
-        let tempGrid = newGrid;
-        while (checkMatches(tempGrid)) {
-          hasMatches = true;
-          tempGrid = tempGrid.map(r => [...r]);
-        }
+        const tempGrid = [...newGrid.map(r => [...r])];
+        const hasMatches = checkMatches(tempGrid);
 
         if (hasMatches) {
           setGrid(tempGrid);
           setMoves(m => m - 1);
-        } else {
-          [newGrid[row][col], newGrid[selectedRow][selectedCol]] = 
-          [newGrid[selectedRow][selectedCol], newGrid[row][col]];
         }
       }
       setSelectedCell(null);

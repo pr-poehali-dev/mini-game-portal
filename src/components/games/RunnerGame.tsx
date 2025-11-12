@@ -79,7 +79,7 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         onGameEnd(score, score >= 1000 ? 'win' : 'lose');
       }
     });
-  }, [obstacles, playerY]);
+  }, [obstacles, playerY, score, onGameEnd]);
 
   const handleJump = () => {
     if (!isJumping && !gameOver) {
@@ -118,79 +118,86 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
         </div>
 
         <div
-          className="relative h-64 bg-gradient-to-b from-cyan-50 to-blue-100 rounded-xl overflow-hidden cursor-pointer border-4 border-game-cyan/30"
+          className="relative w-full h-72 bg-gradient-to-b from-sky-200 via-sky-100 to-green-200 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl"
           onClick={handleJump}
         >
-          <div className="absolute top-8 left-4 text-4xl animate-float" style={{ animationDelay: '0s' }}>☁️</div>
-          <div className="absolute top-12 right-20 text-3xl animate-float" style={{ animationDelay: '1s' }}>☁️</div>
-          <div className="absolute top-6 left-1/2 text-4xl animate-float" style={{ animationDelay: '2s' }}>☁️</div>
+          <div className="absolute top-8 left-8 text-5xl animate-float" style={{ animationDelay: '0s' }}>☁️</div>
+          <div className="absolute top-16 right-24 text-4xl animate-float" style={{ animationDelay: '1s' }}>☁️</div>
+          <div className="absolute top-10 left-1/2 text-5xl animate-float" style={{ animationDelay: '2s' }}>☁️</div>
+          <div className="absolute top-20 left-1/3 text-3xl animate-float" style={{ animationDelay: '1.5s' }}>☁️</div>
           
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-green-700 via-green-500 to-green-400">
-            <div className="absolute top-0 left-0 right-0 h-2 bg-green-800/50" />
-            <div className="flex gap-8 absolute top-1 left-0 animate-pulse">
-              {Array.from({ length: 20 }).map((_, i) => (
-                <span key={i} className="text-green-800 text-xs">🌱</span>
+          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-green-700 via-green-600 to-green-400 rounded-b-2xl">
+            <div className="absolute top-0 left-0 right-0 h-3 bg-green-900/40 shadow-inner" />
+            <div className="flex gap-12 absolute top-2 left-0 w-full overflow-hidden">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <span key={i} className="text-green-900 text-base">🌱</span>
               ))}
             </div>
           </div>
 
           <div
-            className="absolute w-14 h-14 flex items-center justify-center text-4xl transition-all duration-100 z-10"
+            className="absolute w-16 h-16 flex items-center justify-center text-5xl transition-transform duration-100 z-20"
             style={{
-              left: '80px',
-              bottom: `${64 + playerY}px`,
-              transform: isJumping ? 'rotate(-10deg)' : 'rotate(0deg)',
+              left: '90px',
+              bottom: `${80 + playerY}px`,
+              transform: isJumping ? 'rotate(-15deg) scale(1.1)' : 'rotate(0deg) scale(1)',
             }}
           >
             <div className="relative">
               🏃
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-black/20 rounded-full" 
-                   style={{ transform: `translateX(-50%) scale(${1 - playerY / 200})` }} />
+              <div 
+                className="absolute -bottom-3 left-1/2 w-10 h-2 bg-black/20 rounded-full blur-sm" 
+                style={{ 
+                  transform: `translateX(-50%) scale(${1 - playerY / 150})`,
+                  opacity: 1 - playerY / 150
+                }} 
+              />
             </div>
           </div>
 
           {obstacles.map((obs) => (
             <div
               key={obs.id}
-              className="absolute flex flex-col items-center"
+              className="absolute flex flex-col items-center z-10"
               style={{
                 left: `${obs.x}px`,
-                bottom: '64px',
+                bottom: '80px',
               }}
             >
-              <div className="w-10 h-14 bg-gradient-to-b from-red-500 to-red-700 rounded-t-lg border-2 border-red-800 shadow-lg relative">
-                <div className="absolute inset-1 bg-red-400/30 rounded" />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl">⚠️</div>
+              <div className="w-12 h-16 bg-gradient-to-b from-red-400 via-red-600 to-red-800 rounded-t-xl border-3 border-red-900 shadow-2xl relative">
+                <div className="absolute inset-2 bg-red-300/40 rounded-lg" />
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl">⚠️</div>
               </div>
-              <div className="w-12 h-2 bg-red-800 rounded-b" />
+              <div className="w-14 h-3 bg-red-900 rounded-b-lg shadow-lg" />
             </div>
           ))}
 
           {gameOver && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <div className="text-white text-center">
-                <p className="text-4xl font-heading font-bold mb-2">Игра окончена!</p>
-                <p className="text-xl">Счёт: {score}</p>
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-2xl z-30">
+              <div className="text-white text-center space-y-4 p-8 bg-black/40 rounded-xl">
+                <p className="text-5xl">💥</p>
+                <p className="text-5xl font-heading font-bold">Игра окончена!</p>
+                <p className="text-2xl">Счёт: {score}</p>
               </div>
             </div>
           )}
 
-          <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full border-2 border-game-cyan">
-            <p className="text-xs font-heading font-bold text-game-cyan">Скорость: {gameSpeed.toFixed(1)}x</p>
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border-3 border-cyan-400 shadow-lg z-20">
+            <p className="text-sm font-heading font-bold text-cyan-600">⚡ Скорость: {gameSpeed.toFixed(1)}x</p>
           </div>
         </div>
 
         {!gameOver && (
           <div className="mt-4 text-center">
             <Button
-              className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-8 py-6 rounded-full"
+              className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-8 py-6 rounded-full shadow-lg"
               onClick={handleJump}
             >
               <Icon name="MoveUp" size={24} className="mr-2" />
               Прыгнуть (Пробел)
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
-              Нажми кнопку или пробел для прыжка
+              Нажми кнопку, экран или пробел для прыжка
             </p>
           </div>
         )}

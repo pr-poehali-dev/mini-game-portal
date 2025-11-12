@@ -49,7 +49,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     if (gameOver) {
       onGameEnd(score, score >= 500 ? 'win' : 'lose');
     }
-  }, [gameOver]);
+  }, [gameOver, score, onGameEnd]);
 
   const autoStack = () => {
     if (gameOver) return;
@@ -60,7 +60,6 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
 
     if (overlap < 15) {
       setGameOver(true);
-      onGameEnd(score, score >= 500 ? 'win' : 'lose');
       return;
     }
 
@@ -72,7 +71,6 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
 
     if (stackedCakes.length >= 10) {
       setGameOver(true);
-      onGameEnd(newScore, newScore >= 500 ? 'win' : 'lose');
       return;
     }
 
@@ -110,10 +108,10 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           <p className="text-muted-foreground">Стакай коржи точно друг на друга!</p>
         </div>
 
-        <div className="relative h-[500px] bg-gradient-to-b from-purple-50 to-pink-50 rounded-xl overflow-hidden">
+        <div className="relative w-full h-[500px] bg-gradient-to-b from-purple-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200">
           {isFalling && !gameOver && (
             <div
-              className="absolute flex items-center justify-center text-3xl font-bold"
+              className="absolute flex items-center justify-center text-3xl font-bold shadow-2xl"
               style={{
                 top: `${fallingCakeY}px`,
                 left: `${fallingCakeX}%`,
@@ -122,8 +120,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 background: `linear-gradient(135deg, ${COLORS[stackedCakes.length % COLORS.length]}, ${COLORS[(stackedCakes.length + 1) % COLORS.length]})`,
                 transform: 'translateX(-50%)',
                 borderRadius: '12px',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
-                border: '3px solid rgba(255,255,255,0.5)',
+                border: '3px solid rgba(255,255,255,0.8)',
               }}
             >
               🍰
@@ -133,7 +130,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           {stackedCakes.map((cake, index) => (
             <div
               key={index}
-              className="absolute flex items-center justify-center text-2xl"
+              className="absolute flex items-center justify-center text-2xl shadow-xl"
               style={{
                 bottom: `${index * 40}px`,
                 left: `${cake.position}%`,
@@ -142,22 +139,22 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 background: `linear-gradient(135deg, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 1) % COLORS.length]})`,
                 transform: 'translateX(-50%)',
                 borderRadius: '12px',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                border: '3px solid rgba(255,255,255,0.5)',
+                border: '3px solid rgba(255,255,255,0.8)',
               }}
             >
               {index === 0 ? '🎂' : '🍰'}
             </div>
           ))}
 
-          <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-r from-game-pink via-game-orange to-game-cyan" />
+          <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-r from-game-pink via-game-orange to-game-cyan rounded-b-xl" />
           
           {gameOver && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-              <div className="text-white text-center space-y-4">
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-2xl">
+              <div className="text-white text-center space-y-4 p-8 bg-black/40 rounded-xl">
                 <p className="text-5xl">🎂</p>
                 <p className="text-4xl font-heading font-bold">Игра окончена!</p>
                 <p className="text-2xl">Башня из {stackedCakes.length} тортиков</p>
+                <p className="text-xl text-yellow-300">Очки: {score}</p>
               </div>
             </div>
           )}
