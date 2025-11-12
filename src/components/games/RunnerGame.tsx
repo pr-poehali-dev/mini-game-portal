@@ -2,94 +2,157 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Icon from "@/components/ui/icon";
+
 interface GameProps {
   onGameEnd: (score: number, result: "win" | "lose") => void;
   onBack: () => void;
 }
-interface Obstacle {
-  x: number;
+
+interface Pipe {
   id: number;
+  x: number;
+  gapY: number; // центр зазора
+  passed: boolean;
 }
-const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
+
+// Константы
+const GRAVITY = 0.6;
+const FLAP_STRENGTH = -11;
+const PIPE_WIDTH = 80;
+const PIPE_GAP = 150;
+const PIPE_SPEED = 4;
+const BIRD_SIZE = 48;
+const GROUND_HEIGHT = 96;
+const SKY_HEIGHT = 500;
+
+const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-  const [isJumping, setIsJumping] = useState(false);
-  const [playerY, setPlayerY] = useState(0);
-  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [gameSpeed, setGameSpeed] = useState(5);
-  const obstacleIdRef = useRef(0);
+  const [birdY, setBirdY] = useState(250);
+  const [birdVelocity, setBirdVelocity] = useState(0);
+  const [pipes, setPipes] = useState<Pipe[]>([]);
+  const [isFlapping, setIsFlapping] = useState(false);
+
+  const pipeIdRef = useRef(0);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
+  const gameAreaRef = useRef<HTMLDivElement>(null);
+
+  // === Генерация труб ===
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!gameOver) {
-        setObstacles((prev) => [
-          ...prev.filter((obs) => obs.x > -50),
-          ...(Math.random() < 0.02
-            ? [{ x: 600, id: obstacleIdRef.current++ }]
-            : []),
-        ]);
-      }
-    }, 100);
-    return () => clearInterval(interval);
+    if (gameOver) return;
+
+    const spawnInterval = setInterval(() => {
+      setPipes((prev) => [
+        ...prev.filter((p) => p.x > -PIPE_WIDTH - 50),
+        {
+          id: pipeIdRef.current++,
+          x: 650,
+          gapY: 180 + Math.random() * 140, // от 180 до 320
+          passed: false,
+        },
+      ]);
+    }, 2200);
+
+    return () => clearInterval(spawnInterval);
   }, [gameOver]);
+
+  // === Основной игровой цикл ===
   useEffect(() => {
-    if (!gameOver) {
-      gameLoopRef.current = setInterval(() => {
-        setObstacles((prev) =>
-          prev.map((obs) => ({ ...obs, x: obs.x - gameSpeed })),
-        );
-        setScore((s) => s + 1);
-        if (score % 100 === 0 && score > 0) {
-          setGameSpeed((s) => s + 0.5);
+    if (gameOver) return;
+
+    gameLoopRef.current = setInterval(() => {
+      // --- Птица ---
+      setBirdVelocity((v) => v + GRAVITY);
+      setBirdY((y) => {
+        const newY = y + birdVelocity;
+
+        // Столкновение с полом или потолком
+        if (newY <= 0 || newY >= SKY_HEIGHT - GROUND_HEIGHT - BIRD_SIZE) {
+          setGameOver(true);
+          onGameEnd(score, score >= 10 ? "win" : "lose");
+          return y;
         }
-      }, 30);
-    }
+        return newY;
+      });
+
+      // --- Трубы ---
+      setPipes((prev) =>
+        prev.map((pipe) => {
+          const newX = pipe.x - PIPE_SPEED;
+
+          // Прохождение трубы
+          if (!pipe.passed && pipe.x > 140 && newX <= 140) {
+            setScore((s) => s + 1);
+            return { ...pipe, x: newX, passed: true };
+          }
+
+          return { ...pipe, x: newX };
+        }),
+      );
+
+      // --- Проверка столкновений с трубами ---
+      const birdLeft = 100;
+      const birdRight = birdLeft + BIRD_SIZE;
+      const birdTop = birdY;
+      const birdBottom = birdY + BIRD_SIZE;
+
+      pipes.forEach((pipe) => {
+        const pipeLeft = pipe.x;
+        const pipeRight = pipe.x + PIPE_WIDTH;
+
+        if (birdRight > pipeLeft && birdLeft < pipeRight) {
+          const gapTop = pipe.gapY - PIPE_GAP / 2;
+          const gapBottom = pipe.gapY + PIPE_GAP / 2;
+
+          if (birdTop < gapTop || birdBottom > gapBottom) {
+            setGameOver(true);
+            onGameEnd(score, score >= 10 ? "win" : "lose");
+          }
+        }
+      });
+    }, 1000 / 60); // 60 FPS
 
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     };
-  }, [gameOver, gameSpeed, score]);
-  useEffect(() => {
-    if (isJumping) {
-      let jumpProgress = 0;
-      const jumpInterval = setInterval(() => {
-        jumpProgress += 0.1;
-        if (jumpProgress <= Math.PI) {
-          setPlayerY(Math.sin(jumpProgress) * 100);
-        } else {
-          setPlayerY(0);
-          setIsJumping(false);
-          clearInterval(jumpInterval);
-        }
-      }, 20);
-      return () => clearInterval(jumpInterval);
-    }
-  }, [isJumping]);
-  useEffect(() => {
-    obstacles.forEach((obs) => {
-      if (obs.x > 40 && obs.x < 100 && playerY < 40) {
-        setGameOver(true);
-        onGameEnd(score, score >= 1000 ? "win" : "lose");
-      }
-    });
-  }, [obstacles, playerY, score, onGameEnd]);
-  const handleJump = () => {
-    if (!isJumping && !gameOver) {
-      setIsJumping(true);
+  }, [gameOver, birdVelocity, birdY, pipes, score, onGameEnd]);
+
+  // === Взмах крыльями ===
+  const flap = () => {
+    if (!gameOver) {
+      setBirdVelocity(FLAP_STRENGTH);
+      setIsFlapping(true);
+      setTimeout(() => setIsFlapping(false), 150);
     }
   };
+
+  // === Управление (пробел, клик, тач) ===
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
+    const handleKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         e.preventDefault();
-        handleJump();
+        flap();
       }
     };
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isJumping, gameOver]);
+
+    const handleTouch = (e: TouchEvent) => {
+      e.preventDefault();
+      flap();
+    };
+
+    window.addEventListener("keydown", handleKey);
+    const area = gameAreaRef.current;
+    area?.addEventListener("touchstart", handleTouch, { passive: false });
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      area?.removeEventListener("touchstart", handleTouch);
+    };
+  }, [gameOver]);
+
   return (
     <div className="space-y-6 animate-bounce-in max-w-3xl mx-auto">
+      {/* Заголовок и счёт */}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={onBack} className="rounded-full">
           <Icon name="ArrowLeft" size={20} className="mr-2" />
@@ -101,27 +164,29 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             {score}
           </p>
         </Card>
-      </div>{" "}
+      </div>
+
       <Card className="p-6">
         <div className="text-center mb-4">
-          <h2 className="text-3xl font-heading font-bold mb-2">⚡️Бегалка</h2>
+          <h2 className="text-3xl font-heading font-bold mb-2">Flappy Bird</h2>
           <p className="text-muted-foreground">
-            Прыгай через препятствия! Набери 1000 очков
+            Лети через трубы! Набери 10 очков
           </p>
         </div>
 
+        {/* Игровое поле */}
         <div
-          className="relative w-full h-72 bg-gradient-to-b from-sky-200 via-sky-100 to-green-200 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl"
-          onClick={handleJump}
+          ref={gameAreaRef}
+          className="relative w-full h-96 bg-gradient-to-b from-sky-300 via-sky-200 to-sky-100 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl select-none"
+          onClick={flap}
+          onTouchStart={flap}
         >
-          <div
-            className="absolute top-8 left-8 text-5xl animate-float"
-            style={{ animationDelay: "0s" }}
-          >
+          {/* Облака */}
+          <div className="absolute top-8 left-12 text-5xl animate-float">
             ☁️
           </div>
           <div
-            className="absolute top-16 right-24 text-4xl animate-float"
+            className="absolute top-16 right-32 text-4xl animate-float"
             style={{ animationDelay: "1s" }}
           >
             ☁️
@@ -133,94 +198,105 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
             ☁️
           </div>
           <div
-            className="absolute top-20 left-1/3 text-3xl animate-float"
+            className="absolute top-24 left-1/4 text-3xl animate-float"
             style={{ animationDelay: "1.5s" }}
           >
             ☁️
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-green-700 via-green-600 to-green-400 rounded-b-2xl">
-            <div className="absolute top-0 left-0 right-0 h-3 bg-green-900/40 shadow-inner" />
-            <div className="flex gap-12 absolute top-2 left-0 w-full overflow-hidden">
-              {Array.from({ length: 30 }).map((_, i) => (
-                <span key={i} className="text-green-900 text-base">
+          {/* Земля */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-700 via-green-600 to-green-400">
+            <div className="absolute top-0 left-0 right-0 h-4 bg-green-900/40 shadow-inner" />
+            <div className="flex gap-8 absolute top-3 left-0 w-full overflow-hidden">
+              {Array.from({ length: 50 }).map((_, i) => (
+                <span key={i} className="text-green-900 text-lg">
                   🌱
                 </span>
               ))}
             </div>
           </div>
 
+          {/* Птица */}
           <div
-            className="absolute w-16 h-16 flex items-center justify-center text-5xl transition-transform duration-100 z-20"
+            className="absolute flex items-center justify-center text-4xl transition-transform duration-75 z-20"
             style={{
-              left: "90px",
-              bottom: `${80 + playerY}px`,
-              transform: isJumping
-                ? "rotate(-15deg) scale(1.1)"
-                : "rotate(0deg) scale(1)",
+              left: "100px",
+              top: `${birdY}px`,
+              width: `${BIRD_SIZE}px`,
+              height: `${BIRD_SIZE}px`,
+              transform: `rotate(${Math.min(birdVelocity * 3, 90)}deg) scale(${isFlapping ? 1.1 : 1})`,
             }}
           >
-            <div className="relative">
-              🏃‍♂️‍➡️
-              <div
-                className="absolute -bottom-3 left-1/2 w-10 h-2 bg-black/20 rounded-full blur-sm"
-                style={{
-                  transform: `translateX(-50%) scale(${1 - playerY / 150})`,
-                  opacity: 1 - playerY / 150,
-                }}
-              />
-            </div>
+            {isFlapping ? "🪶" : "🐦"}
           </div>
 
-          {obstacles.map((obs) => (
-            <div
-              key={obs.id}
-              className="absolute flex flex-col items-center z-10"
-              style={{
-                left: `${obs.x}px`,
-                bottom: "80px",
-              }}
-            >
-              <div className="w-12 h-16 bg-gradient-to-b from-red-400 via-red-600 to-red-800 rounded-t-xl border-3 border-red-900 shadow-2xl relative">
-                <div className="absolute inset-2 bg-red-300/40 rounded-lg" />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl">
-                  ⚠️
-                </div>
+          {/* Трубы */}
+          {pipes.map((pipe) => (
+            <div key={pipe.id}>
+              {/* Верхняя труба */}
+              <div
+                className="absolute bg-gradient-to-b from-green-600 to-green-800 border-4 border-green-900 rounded-b-xl shadow-2xl"
+                style={{
+                  left: `${pipe.x}px`,
+                  top: 0,
+                  width: `${PIPE_WIDTH}px`,
+                  height: `${pipe.gapY - PIPE_GAP / 2}px`,
+                }}
+              >
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-green-900 rounded-b-lg shadow-md" />
               </div>
-              <div className="w-14 h-3 bg-red-900 rounded-b-lg shadow-lg" />
+
+              {/* Нижняя труба */}
+              <div
+                className="absolute bg-gradient-to-t from-green-600 to-green-800 border-4 border-green-900 rounded-t-xl shadow-2xl"
+                style={{
+                  left: `${pipe.x}px`,
+                  bottom: `${GROUND_HEIGHT}px`,
+                  width: `${PIPE_WIDTH}px`,
+                  height: `${SKY_HEIGHT - GROUND_HEIGHT - (pipe.gapY + PIPE_GAP / 2)}px`,
+                }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-8 bg-green-900 rounded-t-lg shadow-md" />
+              </div>
             </div>
           ))}
 
+          {/* Экран окончания */}
           {gameOver && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-2xl z-30">
-              <div className="text-white text-center space-y-4 p-8 bg-black/40 rounded-xl">
-                <p className="text-5xl">💥</p>
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm rounded-2xl z-30">
+              <div className="text-white text-center space-y-4 p-8 bg-black/50 rounded-2xl border-4 border-white/20">
+                <p className="text-6xl animate-pulse">💥</p>
                 <p className="text-5xl font-heading font-bold">
                   Игра окончена!
                 </p>
-                <p className="text-2xl">Счёт: {score}</p>
+                <p className="text-3xl">Счёт: {score}</p>
+                <p className="text-xl font-medium">
+                  {score >= 10 ? "Победа! Ты мастер!" : "Попробуй ещё раз!"}
+                </p>
               </div>
             </div>
           )}
 
+          {/* Индикатор скорости */}
           <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border-3 border-cyan-400 shadow-lg z-20">
             <p className="text-sm font-heading font-bold text-cyan-600">
-              ⚡️Скорость: {gameSpeed.toFixed(1)}x
+              Скорость: {PIPE_SPEED}x
             </p>
           </div>
         </div>
 
+        {/* Кнопка прыжка */}
         {!gameOver && (
           <div className="mt-4 text-center">
             <Button
-              className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-8 py-6 rounded-full shadow-lg"
-              onClick={handleJump}
+              className="bg-game-cyan hover:bg-game-cyan/90 text-white font-heading text-xl px-8 py-6 rounded-full shadow-lg transform transition active:scale-95"
+              onClick={flap}
             >
               <Icon name="MoveUp" size={24} className="mr-2" />
-              Прыгнуть (Пробел)
+              Взмах (Пробел)
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
-              Нажми кнопку, экран или пробел для прыжка
+              Кликни, нажми пробел или коснись экрана
             </p>
           </div>
         )}
@@ -228,4 +304,5 @@ const RunnerGame = ({ onGameEnd, onBack }: GameProps) => {
     </div>
   );
 };
-export default RunnerGame;
+
+export default FlappyBirdGame;
