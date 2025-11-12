@@ -34,15 +34,15 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const CONTAINER_HEIGHT = 500;
   const CAKE_HEIGHT = 40;
   const GROUND_HEIGHT = 20;
-  const SWING_Y = 80; // фиксированная высота качания (от верха)
-  const DROP_SPEED = 10;
+  const SWING_Y = 80; // фиксированная высота качания (от верха экрана)
+  const DROP_SPEED = 12;
   const WIN_THRESHOLD = 15;
 
-  // === КАЧАНИЕ ТОРТИКА (БЫСТРЕЕ, МЕНЬШЕ АМПЛИТУДА) ===
+  // === КАЧАНИЕ ТОРТИКА ===
   useEffect(() => {
     if (!gameOver && isSwinging && !isDropping) {
       let direction = 1;
-      const speed = 0.8;
+      const speed = 1.2;
       const minX = 30;
       const maxX = 70;
 
@@ -70,6 +70,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setIsDropping(true);
     setIsSwinging(false);
 
+    // Вычисляем позицию верха башни (учитывая смещение камеры)
     const topOfTowerY =
       GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY;
     let currentDropY = SWING_Y;
@@ -122,11 +123,11 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setStackedCakes(newStacked);
     setCurrentWidth(overlapWidth);
 
-    // === СДВИГ КАМЕРЫ ВНИЗ ===
+    // === СДВИГ БАШНИ ВНИЗ ===
     const newCameraY = cameraY + CAKE_HEIGHT;
     setCameraY(newCameraY);
 
-    // === НОВЫЙ ТОРТИК ВСЕГДА В SWING_Y ===
+    // === НОВЫЙ ТОРТИК ВСЕГДА В SWING_Y (НЕ СМЕЩАЕТСЯ!) ===
     setTimeout(() => {
       setCurrentCakeX(Math.random() * 30 + 35);
       setIsSwinging(true);
@@ -169,7 +170,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
       <Card className="p-6">
         <div className="text-center mb-4">
           <h2 className="text-3xl font-heading font-bold mb-2">
-            Стакер тортиков
+            🎂 Стакер тортиков
           </h2>
           <p className="text-muted-foreground">
             Стакай коржи точно друг на друга!
@@ -179,35 +180,13 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
         <div
           ref={gameAreaRef}
           className="relative w-full h-[500px] bg-gradient-to-b from-sky-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200 shadow-2xl"
+          style={{ perspective: "1000px" }}
         >
+          {/* КАМЕРА (сдвиг башни вниз) */}
           <div
             className="absolute inset-0"
-            style={{ transform: `translateY(${cameraY}px)` }} // ДВИГАЕМ ВНИЗ
+            style={{ transform: `translateY(${cameraY}px)` }}
           >
-            {/* ТЕКУЩИЙ КАЧАЮЩИЙСЯ ТОРТИК — ВСЕГДА В SWING_Y */}
-            {(isSwinging || isDropping) && !gameOver && (
-              <div
-                className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
-                style={{
-                  top: `${isDropping ? "auto" : SWING_Y}px`,
-                  bottom: isDropping
-                    ? `${CONTAINER_HEIGHT - (GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY)}px`
-                    : "auto",
-                  left: `${currentCakeX}%`,
-                  width: `${currentWidth}px`,
-                  height: "40px",
-                  background: `linear-gradient(135deg, ${COLORS[stackedCakes.length % COLORS.length]}, ${COLORS[(stackedCakes.length + 1) % COLORS.length]})`,
-                  transform: `translateX(-50%) rotate(${isSwinging ? (currentCakeX > 50 ? -3 : 3) : 0}deg)`,
-                  borderRadius: "16px",
-                  border: "4px solid rgba(255,255,255,0.9)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-                  transition: isDropping ? "none" : "transform 0.1s",
-                }}
-              >
-                Тортик
-              </div>
-            )}
-
             {/* СТЕК ТОРТИКОВ — УХОДИТ ВНИЗ */}
             {stackedCakes.map((cake, index) => (
               <div
@@ -222,26 +201,44 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                   transform: "translateX(-50%)",
                   borderRadius: "16px",
                   border: "4px solid rgba(255,255,255,0.9)",
-                  boxShadow: "0 8px 32px rgba 0,0,0,0.15",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                   zIndex: stackedCakes.length - index,
                 }}
               >
-                {index === 0 ? "Торт" : "Тортик"}
+                {index === 0 ? "🎂" : "🍰"}
               </div>
             ))}
 
-            {/* ЗЕМЛЯ — ВСЕГДА ВНИЗУ */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-400 rounded-b-xl shadow-lg"
-              style={{ height: `${GROUND_HEIGHT}px` }}
-            />
+            {/* ЗЕМЛЯ */}
+            <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-400 rounded-b-xl shadow-lg" />
           </div>
+
+          {/* ТЕКУЩИЙ КАЧАЮЩИЙСЯ/ПАДАЮЩИЙ ТОРТИК — ПОЗАДИ КАМЕРЫ, ВСЕГДА НАВЕРХУ */}
+          {(isSwinging || isDropping) && !gameOver && (
+            <div
+              className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
+              style={{
+                top: SWING_Y,
+                left: `${currentCakeX}%`,
+                width: `${currentWidth}px`,
+                height: "40px",
+                background: `linear-gradient(135deg, ${COLORS[stackedCakes.length % COLORS.length]}, ${COLORS[(stackedCakes.length + 1) % COLORS.length]})`,
+                transform: `translateX(-50%) rotate(${isSwinging ? (currentCakeX > 50 ? -3 : 3) : 0}deg)`,
+                borderRadius: "16px",
+                border: "4px solid rgba(255,255,255,0.9)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                transition: isSwinging ? "transform 0.1s ease-out" : "none",
+              }}
+            >
+              🍰
+            </div>
+          )}
 
           {/* ЭКРАН ОКОНЧАНИЯ */}
           {gameOver && (
             <div className="absolute inset-0 bg-black/80 flex items-center justify-center backdrop-blur-md rounded-2xl z-50">
               <div className="text-white text-center space-y-6 p-12 bg-gradient-to-b from-purple-900/90 to-pink-900/90 rounded-3xl border-4 border-white/20">
-                <p className="text-7xl animate-bounce">Торт</p>
+                <p className="text-7xl animate-bounce">🎂</p>
                 <p className="text-4xl font-heading font-bold tracking-wide">
                   Игра окончена!
                 </p>
@@ -255,7 +252,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 </div>
                 {score >= WIN_THRESHOLD && (
                   <p className="text-3xl text-green-300 font-bold animate-pulse">
-                    ПОБЕДА!
+                    🏆 ПОБЕДА! 🏆
                   </p>
                 )}
               </div>
@@ -271,7 +268,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             disabled={isDropping || !isSwinging}
           >
             <Icon name="MousePointerClick" size={24} className="mr-3" />
-            {isDropping ? "Тортик Падает..." : "Тортик Сбросить тортик!"}
+            {isDropping ? "🍰 Падает..." : "🍰 Сбросить тортик!"}
           </Button>
         )}
 
@@ -281,11 +278,11 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           </p>
           <p className="text-lg font-heading">
             {stackedCakes.length >= WIN_THRESHOLD
-              ? "Рекорд! Продолжай!"
+              ? "🏆 Рекорд! Продолжай!"
               : `Цель: ${WIN_THRESHOLD}+ тортиков`}
           </p>
           <p className="text-sm text-muted-foreground">
-            Жди идеального момента!
+            Жди идеального момента для сброса!
           </p>
         </div>
       </Card>
