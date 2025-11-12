@@ -54,15 +54,15 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
     }
   };
 
+  /* ---------- Спавн труб ---------- */
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
     const spawnInterval = setInterval(() => {
-      // Разнообразие: то сверху, то снизу
       const isTopPipe = Math.random() < 0.5;
       const gapY = isTopPipe
-        ? 120 + Math.random() * 80 // зазор ближе к верху
-        : 320 - Math.random() * 80; // зазор ближе к низу
+        ? 120 + Math.random() * 80
+        : 320 - Math.random() * 80;
 
       setPipes((prev) => [
         ...prev.filter((p) => p.x > -PIPE_WIDTH - 50),
@@ -73,11 +73,12 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           passed: false,
         },
       ]);
-    }, 1000); // ОЧЕНЬ БОЛЬШОЕ расстояние
+    }, 1000);
 
     return () => clearInterval(spawnInterval);
   }, [gameStarted, gameOver]);
 
+  /* ---------- Основной игровой цикл ---------- */
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
@@ -87,7 +88,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
         const newY = y + birdVelocity;
         if (newY <= 0 || newY >= SKY_HEIGHT - GROUND_HEIGHT - BIRD_SIZE) {
           setGameOver(true);
-          onGameEnd(score, score >= 30 ? "win" : "lose"); // Увеличена цель
+          onGameEnd(score, score >= 30 ? "win" : "lose");
           return y;
         }
         return newY;
@@ -128,6 +129,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [gameStarted, gameOver, birdVelocity, birdY, pipes, score, onGameEnd]);
 
+  /* ---------- Управление (пробел / тач / клик) ---------- */
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -151,19 +153,21 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [gameStarted, gameOver]);
 
+  /* ---------- Рендер ---------- */
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Шапка (кнопка назад + можно оставить/убрать карточку со счётом) */}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={onBack} className="rounded-full">
           <Icon name="ArrowLeft" size={20} className="mr-2" />
           Назад
         </Button>
-        <Card className="px-4 py-2">
+
+        {/* Если нужен счёт в шапке — раскомментировать */}
+        {/* <Card className="px-4 py-2">
           <p className="text-sm text-muted-foreground">Очки</p>
-          <p className="text-2xl font-heading font-bold text-game-cyan">
-            {score}
-          </p>
-        </Card>
+          <p className="text-2xl font-heading font-bold text-game-cyan">{score}</p>
+        </Card> */}
       </div>
 
       <Card className="p-6">
@@ -174,12 +178,14 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           </p>
         </div>
 
+        {/* Игровое поле */}
         <div
           ref={gameAreaRef}
           className="relative w-full h-96 bg-gradient-to-b from-sky-300 via-sky-200 to-sky-100 rounded-2xl overflow-hidden cursor-pointer border-4 border-cyan-300 shadow-xl select-none"
           onClick={startAndFlap}
           onTouchStart={startAndFlap}
         >
+          {/* Экран "Нажми, чтобы начать" */}
           {!gameStarted && !gameOver && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-2xl z-30">
               <div className="text-white text-center">
@@ -189,24 +195,35 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           )}
 
-          <div className="absolute top-8 left-12 text-5xl">☁️</div>
-          <div className="absolute top-16 right-32 text-4xl">☁️</div>
+          {/* Облака */}
+          <div className="absolute top-8 left-12 text-5xl">Cloud</div>
+          <div className="absolute top-16 right-32 text-4xl">Cloud</div>
           <div className="absolute top-10 left-1/2 text-5xl -translate-x-1/2">
-            ☁️
+            Cloud
           </div>
-          <div className="absolute top-24 left-1/4 text-3xl">☁️</div>
+          <div className="absolute top-24 left-1/4 text-3xl">Cloud</div>
 
+          {/* Счётчик очков в углу игрового поля (только во время игры) */}
+          {gameStarted && !gameOver && (
+            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-cyan-400 shadow-md z-30 flex items-center gap-2">
+              <span className="text-cyan-600 font-bold text-lg">Star</span>
+              <span className="text-xl font-bold text-cyan-700">{score}</span>
+            </div>
+          )}
+
+          {/* Земля */}
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-700 via-green-600 to-green-400">
             <div className="absolute top-0 left-0 right-0 h-4 bg-green-900/40" />
             <div className="flex gap-8 absolute top-3 left-0 w-full overflow-hidden">
               {Array.from({ length: 50 }).map((_, i) => (
                 <span key={i} className="text-green-900 text-lg">
-                  🌱
+                  Grass
                 </span>
               ))}
             </div>
           </div>
 
+          {/* Птица */}
           <div
             className="absolute flex items-center justify-center text-4xl z-20"
             style={{
@@ -217,11 +234,13 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
               transform: `rotate(${gameStarted ? Math.min(birdVelocity * 3, 90) : 0}deg)`,
             }}
           >
-            🐥
+            Chick
           </div>
 
+          {/* Трубы */}
           {pipes.map((pipe) => (
             <div key={pipe.id}>
+              {/* Верхняя часть */}
               <div
                 className="absolute bg-gradient-to-b from-green-600 to-green-800 border-4 border-green-900 rounded-b-xl shadow-2xl"
                 style={{
@@ -234,6 +253,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
                 <div className="absolute bottom-0 left-0 right-0 h-8 bg-green-900 rounded-b-lg shadow-md" />
               </div>
 
+              {/* Нижняя часть */}
               <div
                 className="absolute bg-gradient-to-t from-green-600 to-green-800 border-4 border-green-900 rounded-t-xl shadow-2xl"
                 style={{
@@ -248,10 +268,11 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           ))}
 
+          {/* Экран Game Over */}
           {gameOver && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-2xl z-30">
               <div className="text-white text-center space-y-4 p-8 bg-black/50 rounded-2xl border-4 border-white/20">
-                <p className="text-6xl">💥</p>
+                <p className="text-6xl">Explosion</p>
                 <p className="text-5xl font-heading font-bold">
                   Игра окончена!
                 </p>
@@ -263,6 +284,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
             </div>
           )}
 
+          {/* Индикатор скорости (правый верхний угол) */}
           <div className="absolute top-3 right-3 bg-white/90 px-4 py-2 rounded-full border-3 border-cyan-400 shadow-lg z-20">
             <p className="text-sm font-heading font-bold text-cyan-600">
               Скорость: {PIPE_SPEED}x
@@ -270,6 +292,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           </div>
         </div>
 
+        {/* Кнопка "Начать" (до старта) */}
         {!gameOver && !gameStarted && (
           <div className="mt-4 text-center">
             <Button
@@ -282,6 +305,7 @@ const FlappyBirdGame = ({ onGameEnd, onBack }: GameProps) => {
           </div>
         )}
 
+        {/* Кнопка "Взмах" (во время игры) */}
         {gameStarted && !gameOver && (
           <div className="mt-4 text-center">
             <Button
