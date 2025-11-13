@@ -201,7 +201,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                   bottom: `${GROUND_HEIGHT + index * CAKE_HEIGHT}px`,
                   left: `${cake.position}%`,
                   width: `${cake.width}px`,
-                  height: "40px",
+                  height: "80px",
                   background: `linear-gradient(135deg, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 1) % COLORS.length]})`,
                   transform: "translateX(-50%)",
                   borderRadius: "16px",
