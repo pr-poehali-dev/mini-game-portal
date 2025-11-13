@@ -36,9 +36,10 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const CAKE_HEIGHT = 40;
   const GROUND_HEIGHT = 20;
   const SWING_Y = 80;
-  const DROP_SPEED = 18;
+  const DROP_SPEED = 16; // чуть медленнее для реализма
   const WIN_THRESHOLD = 15;
   const CAMERA_START = 5;
+  const SCREEN_BOTTOM = CONTAINER_HEIGHT - 50; // конец экрана
 
   // === КАЧАНИЕ ===
   useEffect(() => {
@@ -65,26 +66,33 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [isSwinging, isDropping, gameOver]);
 
-  // === ✅ ПАДЕНИЕ — ТОЧНО ДО ВЕРХА БАШНИ (с cameraY!) ===
+  // === ✅ ИСПРАВЛЕННАЯ АНИМАЦИЯ ПАДЕНИЯ ===
   const handleDrop = () => {
     if (gameOver || isDropping || !isSwinging) return;
 
     setIsDropping(true);
     setIsSwinging(false);
 
-    // 🎯 ТОЧНАЯ ПОЗИЦИЯ ВЕРХА БАШНИ (от экрана)
-    const topOfTowerY =
-      GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY;
+    // 🎯 Всегда падает КРАТКО — от верха экрана до верха башни
+    const topOfTowerScreenY = SWING_Y + stackedCakes.length * CAKE_HEIGHT;
     let currentY = SWING_Y;
 
     const drop = () => {
       currentY += DROP_SPEED;
       setCurrentCakeY(currentY);
 
-      if (currentY >= topOfTowerY) {
-        setCurrentCakeY(topOfTowerY); // ✅ ОСТАНАВЛИВАЕТСЯ ТОЧНО НА ВЕРХЕ!
+      // ✅ ЛЕТИТ ДО ВЕРХА БАШНИ ИЛИ КОНЦА ЭКРАНА
+      if (currentY >= topOfTowerScreenY) {
+        // УСПЕШНО — останавливается на верху башни
+        setCurrentCakeY(topOfTowerScreenY);
         cancelAnimationFrame(dropAnimationFrame.current!);
         stackCake();
+        return;
+      }
+
+      if (currentY >= SCREEN_BOTTOM) {
+        // НЕ УДАЛОСЬ — улетает за экран
+        setGameOver(true);
         return;
       }
 
@@ -127,14 +135,14 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setStackedCakes(newStacked);
     setCurrentWidth(overlapWidth);
 
-    // ✅ Сдвиг камеры только после 5-го
+    // ✅ Башня опускается только после 5-го
     let newCameraY = cameraY;
     if (newStacked.length >= CAMERA_START) {
       newCameraY = cameraY + CAKE_HEIGHT;
     }
     setCameraY(newCameraY);
 
-    // ✅ Возврат тортика наверх
+    // ✅ Новый тортик наверх
     setTimeout(() => {
       setCurrentCakeY(SWING_Y);
       setCurrentCakeX(Math.random() * 30 + 35);
@@ -189,7 +197,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           className="relative w-full h-[500px] bg-gradient-to-b from-sky-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200 shadow-2xl"
           style={{ perspective: "1000px" }}
         >
-          {/* ✅ БАШНЯ (сдвигается вниз) */}
+          {/* ✅ БАШНЯ (опускается вниз после 5-го) */}
           <div
             className="absolute inset-0"
             style={{ transform: `translateY(${cameraY}px)` }}
@@ -217,7 +225,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-400 rounded-b-xl shadow-lg" />
           </div>
 
-          {/* ✅ ТОРТИК (анимация полета — ОТ ЭКРАНА ДО ВЕРХА БАШНИ) */}
+          {/* ✅ ТОРТИК (КРАТКИЙ ПОЛЕТ — ВСЕГДА одинаково!) */}
           {(isSwinging || isDropping) && !gameOver && (
             <div
               className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
