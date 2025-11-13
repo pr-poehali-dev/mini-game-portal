@@ -68,22 +68,23 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   // === ПАДЕНИЕ — АНИМАЦИЯ К ВЕРХУ БАШНИ (каждый раз!) ===
   const handleDrop = () => {
     if (gameOver || isDropping || !isSwinging) return;
-
     setIsDropping(true);
     setIsSwinging(false);
 
-    // ✅ ТОЛЬКО ВЕРХ БАШНИ (НЕ УЧИТАЯ cameraY для тортика!)
     const topOfTowerY =
-      GROUND_HEIGHT + (stackedCakes.length * CAKE_HEIGHT - cameraY); // Учитываем камеру
-    let currentY = SWING_Y - 200; // Старт выше, для дистанции ~280px
+      GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT - cameraY;
+    const dropDistance = Math.max(topOfTowerY - SWING_Y, 120); // Минимум 120px для видимого падения
+    const targetY = SWING_Y + dropDistance; // Цель ниже свинга
+    let currentY = SWING_Y; // Старт с свинга!
     let velocity = 0;
-    const gravity = 1.2;
+    const gravity = 1.0;
 
     const drop = () => {
-      if (currentY + velocity >= topOfTowerY) {
-        setCurrentCakeY(topOfTowerY);
+      if (currentY + velocity >= targetY) {
+        setCurrentCakeY(topOfTowerY); // Финал на реальной вершине
         cancelAnimationFrame(dropAnimationFrame.current!);
         stackCake();
+        setIsDropping(false);
         return;
       }
       velocity += gravity;
@@ -91,7 +92,6 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
       setCurrentCakeY(currentY);
       dropAnimationFrame.current = requestAnimationFrame(drop);
     };
-
     dropAnimationFrame.current = requestAnimationFrame(drop);
   };
 
