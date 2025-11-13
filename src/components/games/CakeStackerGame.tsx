@@ -19,7 +19,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const [cameraY, setCameraY] = useState(0);
 
   const [currentCakeX, setCurrentCakeX] = useState(50);
-  const [currentCakeY, setCurrentCakeY] = useState(80); // стартовая Y
+  const [currentCakeY, setCurrentCakeY] = useState(80); // анимируемая позиция Y
   const [isSwinging, setIsSwinging] = useState(true);
   const [isDropping, setIsDropping] = useState(false);
 
@@ -36,8 +36,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
   const CAKE_HEIGHT = 40;
   const GROUND_HEIGHT = 20;
   const SWING_Y = 80;
-  const DROP_DURATION = 350; // мс — всегда одинаково
-  const DROP_MISS_DURATION = 600; // промах — чуть дольше
+  const DROP_SPEED = 18;
   const WIN_THRESHOLD = 15;
   const CAMERA_START = 5;
 
@@ -66,13 +65,37 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     };
   }, [isSwinging, isDropping, gameOver]);
 
-  // === ПАДЕНИЕ С ФИКСИРОВАННОЙ ДЛИТЕЛЬНОСТЬЮ ===
+  // === ✅ ПАДЕНИЕ — ТОЧНО ДО ВЕРХА БАШНИ (с cameraY!) ===
   const handleDrop = () => {
     if (gameOver || isDropping || !isSwinging) return;
 
     setIsDropping(true);
     setIsSwinging(false);
 
+    // 🎯 ТОЧНАЯ ПОЗИЦИЯ ВЕРХА БАШНИ (от экрана)
+    const topOfTowerY =
+      GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY;
+    let currentY = SWING_Y;
+
+    const drop = () => {
+      currentY += DROP_SPEED;
+      setCurrentCakeY(currentY);
+
+      if (currentY >= topOfTowerY) {
+        setCurrentCakeY(topOfTowerY); // ✅ ОСТАНАВЛИВАЕТСЯ ТОЧНО НА ВЕРХЕ!
+        cancelAnimationFrame(dropAnimationFrame.current!);
+        stackCake();
+        return;
+      }
+
+      dropAnimationFrame.current = requestAnimationFrame(drop);
+    };
+
+    dropAnimationFrame.current = requestAnimationFrame(drop);
+  };
+
+  // === СТЕКАНИЕ ===
+  const stackCake = () => {
     const containerWidth = gameAreaRef.current?.offsetWidth || 600;
     const lastCake = stackedCakes[stackedCakes.length - 1];
     const currentCenterPx = (currentCakeX / 100) * containerWidth;
@@ -87,64 +110,16 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     const overlapRight = Math.min(rightEdge, lastRight);
     const overlapWidth = Math.max(0, overlapRight - overlapLeft);
 
-    const isMissing = overlapWidth < 15;
+    if (overlapWidth < 15) {
+      setGameOver(true);
+      return;
+    }
 
-    // Целевая Y
-    const targetY = isMissing
-      ? CONTAINER_HEIGHT - CAKE_HEIGHT // до "земли"
-      : GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT + cameraY;
+    const newScore = score + 1;
+    setScore(newScore);
 
-    const startY = SWING_Y;
-    const distance = targetY - startY;
-    const duration = isMissing ? DROP_MISS_DURATION : DROP_DURATION;
-
-    let startTime: number | null = null;
-
-    // Плавное затухание (easeOutQuad)
-    const easeOutQuad = (t: number) => 1 - (1 - t) * (1 - t);
-
-    const animateDrop = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOutQuad(progress);
-      const currentY = startY + distance * eased;
-
-      setCurrentCakeY(currentY);
-
-      if (progress < 1) {
-        dropAnimationFrame.current = requestAnimationFrame(animateDrop);
-      } else {
-        setCurrentCakeY(targetY);
-        if (isMissing) {
-          setGameOver(true);
-        } else {
-          stackCake(overlapWidth);
-        }
-      }
-    };
-
-    dropAnimationFrame.current = requestAnimationFrame(animateDrop);
-  };
-
-  // === СТЕКАНИЕ ===
-  const stackCake = (overlapWidth: number) => {
-    const containerWidth = gameAreaRef.current?.offsetWidth || 600;
-    const lastCake = stackedCakes[stackedCakes.length - 1];
-    const currentCenterPx = (currentCakeX / 100) * containerWidth;
-    const lastCenterPx = (lastCake.position / 100) * containerWidth;
-
-    const overlapLeft = Math.max(
-      currentCenterPx - currentWidth / 2,
-      lastCenterPx - lastCake.width / 2,
-    );
-    const overlapRight = Math.min(
-      currentCenterPx + currentWidth / 2,
-      lastCenterPx + lastCake.width / 2,
-    );
     const newPosition =
       ((overlapLeft + overlapRight) / 2 / containerWidth) * 100;
-
     const newStacked = [
       ...stackedCakes,
       { position: newPosition, width: overlapWidth },
@@ -152,17 +127,14 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setStackedCakes(newStacked);
     setCurrentWidth(overlapWidth);
 
-    const newScore = score + 1;
-    setScore(newScore);
-
-    // Сдвиг камеры после 5-го
+    // ✅ Сдвиг камеры только после 5-го
     let newCameraY = cameraY;
     if (newStacked.length >= CAMERA_START) {
       newCameraY = cameraY + CAKE_HEIGHT;
     }
     setCameraY(newCameraY);
 
-    // Возврат тортика
+    // ✅ Возврат тортика наверх
     setTimeout(() => {
       setCurrentCakeY(SWING_Y);
       setCurrentCakeX(Math.random() * 30 + 35);
@@ -171,22 +143,13 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     }, 400);
   };
 
-  // === ОКОНЧАНИЕ ИГРЫ ===
+  // === ОКОНЧАНИЕ ===
   useEffect(() => {
     if (gameOver) {
       const result = score >= WIN_THRESHOLD ? "win" : "lose";
       onGameEnd(score, result);
     }
   }, [gameOver, score, onGameEnd]);
-
-  // Очистка анимации
-  useEffect(() => {
-    return () => {
-      if (dropAnimationFrame.current) {
-        cancelAnimationFrame(dropAnimationFrame.current);
-      }
-    };
-  }, []);
 
   const COLORS = [
     "#FF6B9D",
@@ -215,21 +178,20 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
       <Card className="p-6">
         <div className="text-center mb-4">
           <h2 className="text-3xl font-heading font-bold mb-2">
-            Стакер тортиков
+            🎂 Стакер тортиков
           </h2>
           <p className="text-muted-foreground">
             Стакай коржи точно друг на друга!
           </p>
         </div>
-
         <div
           ref={gameAreaRef}
           className="relative w-full h-[500px] bg-gradient-to-b from-sky-100 via-pink-50 to-yellow-50 rounded-2xl overflow-hidden border-4 border-purple-200 shadow-2xl"
           style={{ perspective: "1000px" }}
         >
-          {/* БАШНЯ (сдвигается вниз) */}
+          {/* ✅ БАШНЯ (сдвигается вниз) */}
           <div
-            className="absolute inset-0 transition-transform duration-300"
+            className="absolute inset-0"
             style={{ transform: `translateY(${cameraY}px)` }}
           >
             {stackedCakes.map((cake, index) => (
@@ -249,13 +211,13 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                   zIndex: stackedCakes.length - index,
                 }}
               >
-                {index === 0 ? "Торт" : "Корж"}
+                {index === 0 ? "🎂" : "🍰"}
               </div>
             ))}
             <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-400 rounded-b-xl shadow-lg" />
           </div>
 
-          {/* ПАДАЮЩИЙ ТОРТИК */}
+          {/* ✅ ТОРТИК (анимация полета — ОТ ЭКРАНА ДО ВЕРХА БАШНИ) */}
           {(isSwinging || isDropping) && !gameOver && (
             <div
               className="absolute flex items-center justify-center text-4xl font-bold shadow-2xl z-50"
@@ -278,7 +240,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 transition: "none",
               }}
             >
-              Корж
+              🍰
             </div>
           )}
 
@@ -286,7 +248,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           {gameOver && (
             <div className="absolute inset-0 bg-black/80 flex items-center justify-center backdrop-blur-md rounded-2xl z-50">
               <div className="text-white text-center space-y-6 p-12 bg-gradient-to-b from-purple-900/90 to-pink-900/90 rounded-3xl border-4 border-white/20">
-                <p className="text-7xl animate-bounce">Торт</p>
+                <p className="text-7xl animate-bounce">🎂</p>
                 <p className="text-4xl font-heading font-bold tracking-wide">
                   Игра окончена!
                 </p>
@@ -300,7 +262,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
                 </div>
                 {score >= WIN_THRESHOLD && (
                   <p className="text-3xl text-green-300 font-bold animate-pulse">
-                    ПОБЕДА!
+                    🏆 ПОБЕДА! 🏆
                   </p>
                 )}
               </div>
@@ -316,7 +278,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
             disabled={isDropping || !isSwinging}
           >
             <Icon name="MousePointerClick" size={24} className="mr-3" />
-            {isDropping ? "Корж Падает..." : "Корж Сбросить тортик!"}
+            {isDropping ? "🍰 Падает..." : "🍰 Сбросить тортик!"}
           </Button>
         )}
 
@@ -326,7 +288,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
           </p>
           <p className="text-lg font-heading">
             {stackedCakes.length >= WIN_THRESHOLD
-              ? "Рекорд! Продолжай!"
+              ? "🏆 Рекорд! Продолжай!"
               : `Цель: ${WIN_THRESHOLD}+ тортиков`}
           </p>
           <p className="text-sm text-muted-foreground">
