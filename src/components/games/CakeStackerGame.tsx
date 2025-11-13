@@ -73,20 +73,23 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     setIsSwinging(false);
 
     // ✅ ТОЛЬКО ВЕРХ БАШНИ (НЕ УЧИТАЯ cameraY для тортика!)
-    const topOfTowerY = GROUND_HEIGHT + stackedCakes.length * CAKE_HEIGHT;
-    let currentY = SWING_Y;
+    const topOfTowerY =
+      GROUND_HEIGHT + (stackedCakes.length * CAKE_HEIGHT - cameraY); // Учитываем камеру
+    let currentY = SWING_Y - 200; // Старт выше, для дистанции ~280px
+    let velocity = 0;
+    const gravity = 1.2;
 
     const drop = () => {
-      currentY += DROP_SPEED;
+      velocity += gravity;
+      currentY += velocity;
       setCurrentCakeY(currentY);
 
       if (currentY >= topOfTowerY) {
-        setCurrentCakeY(topOfTowerY); // ✅ ОСТАНАВЛИВАЕТСЯ НА ВЕРХУ!
+        setCurrentCakeY(topOfTowerY);
         cancelAnimationFrame(dropAnimationFrame.current!);
         stackCake();
         return;
       }
-
       dropAnimationFrame.current = requestAnimationFrame(drop);
     };
 
