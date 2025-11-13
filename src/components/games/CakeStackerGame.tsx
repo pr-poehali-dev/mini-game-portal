@@ -75,7 +75,7 @@ const CakeStackerGame = ({ onGameEnd, onBack }: GameProps) => {
     // ✅ ТОЛЬКО ВЕРХ БАШНИ (НЕ УЧИТАЯ cameraY для тортика!)
     const topOfTowerY =
       GROUND_HEIGHT + (stackedCakes.length * CAKE_HEIGHT - cameraY); // Учитываем камеру
-    let currentY = SWING_Y - 100; // Старт выше, для дистанции ~280px
+    let currentY = SWING_Y - 500; // Старт выше, для дистанции ~280px
     let velocity = 0;
     const gravity = 1.2;
 
