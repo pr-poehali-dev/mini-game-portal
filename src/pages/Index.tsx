@@ -125,7 +125,6 @@ const Index = () => {
                       key={item.id}
                       onClick={() => {
                         setCurrentSection(item.id as any);
-                        // Закрываем меню
                         document
                           .querySelector('[data-state="open"]')
                           ?.closest('[role="dialog"]')
@@ -331,7 +330,7 @@ const Index = () => {
         {currentSection === "contact" && (
           <div className="space-y-8 animate-bounce-in max-w-2xl mx-auto">
             <h2 className="text-4xl font-heading font-bold text-center">
-              Контакты 📧
+              Контакты
             </h2>
             <Card className="p-8 space-y-6">
               <div className="flex items-center gap-4">
@@ -340,7 +339,14 @@ const Index = () => {
                 </div>
                 <div>
                   <p className="font-heading font-bold">ВКонтакте</p>
-                  <p className="text-muted-foreground">vk.com/electrocila</p>
+                  <a
+                    href="https://vk.com/electrocila"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    vk.com/electrocila
+                  </a>
                 </div>
               </div>
 
@@ -372,7 +378,7 @@ const Index = () => {
         {currentSection === "about" && (
           <div className="space-y-8 animate-bounce-in max-w-4xl mx-auto">
             <div className="text-center space-y-4">
-              <h2 className="text-5xl font-heading font-bold">⚡ О нас</h2>
+              <h2 className="text-5xl font-heading font-bold">⚡О нас</h2>
               <p className="text-xl text-muted-foreground">
                 Студенческий энергетический отряд "Электросила"
               </p>
