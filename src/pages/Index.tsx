@@ -446,7 +446,8 @@ const Index = () => {
                 </div>
                 <div>
                   <h4 className="font-heading font-bold text-lg mb-2">
-                    Приглашаем на турнир!
+                    Приглашаем на турнир! 18 декабря в 17:30, Дискозал Дома
+                    Культуры МЭИ.
                   </h4>
                   <p className="text-sm text-muted-foreground">
                     Вечер компьютерных игр на приставке и настольных игр от
